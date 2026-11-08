@@ -219,7 +219,7 @@
         <!-- VISTA SUPERIOR -->
         <div id="cesiumContainer">
             <div id="app-title">Cañada Balsas - Mazapa / Noviembre 2026</div>
-            <div id="loading-indicator">🔄 Cargando teselas y ortofoto...</div>
+            <div id="loading-indicator">🔄 Cargando teselas 3D...</div>
 
             <div id="vertical-toolbox">
                 <button id="toggle2D3D" class="cesium-button">🌐 Cambiar a Vista 2D</button>
@@ -291,11 +291,11 @@
                 selectionIndicator: false,
                 infoBox: false,
                 scene3DOnly: false,
-                requestRenderMode: true, // Optimización GPU: renderiza solo al mover o interactuar
-                maximumFPS: 30           // Limita los FPS para cuidar la tarjeta de video
+                requestRenderMode: true,
+                maximumFPS: 30
             });
 
-            // Configuración inicial de fondo para 3D
+            // Fondo oscuro corporativo en 3D para ocultar bordes del DEM
             viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
             viewer.scene.globe.show = true; 
             viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
@@ -314,25 +314,26 @@
                 const terrainProvider = await Cesium.CesiumTerrainProvider.fromIonAssetId(terrainAssetId);
                 viewer.terrainProvider = terrainProvider;
 
-                // 2. Capa Esri World Imagery (Fondo base en 2D)
+                // 2. Capa Esri World Imagery (Fondo base en modo 2D)
                 const esriImageryProvider = new Cesium.UrlTemplateImageryProvider({
                     url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                     maximumLevel: 19,
                     credit: 'Esri World Imagery'
                 });
                 esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
-                esriLayer.show = false; // Oculta por defecto en 3D
+                esriLayer.show = false; // Oculto en 3D por defecto
 
-                // 3. Cargar Ortofoto Local (Nivel máximo 19)
+                // 3. Ortofoto Local del Dron (Visible solo en modo 2D)
                 const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId, {
                     maximumLevel: 19 
                 });
                 orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
-                orthoLayer.maximumAnisotropy = viewer.maximumAnisotropy;
+                orthoLayer.show = false; // Oculto en 3D por defecto (en 3D solo se ve el modelo texturizado)
+                orthoLayer.maximumAnisotropy = orthoLayer.maximumAnisotropy;
                 orthoLayer.minificationFilter = Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR;
                 orthoLayer.magnificationFilter = Cesium.TextureMagnificationFilter.LINEAR;
 
-                // 4. Cargar Modelo 3D (3D Tileset)
+                // 4. Cargar Modelo 3D (3D Tileset) - Activo en 3D
                 tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
                 tileset.maximumScreenSpaceError = 3; 
                 tileset.skipLevelOfDetail = false;   
@@ -382,10 +383,14 @@
                 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
                 document.getElementById('btnRecenter').addEventListener('click', async () => {
-                    await viewer.flyTo(tileset, {
-                        duration: 1.2,
-                        offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(is2D ? -90 : -45), is2D ? 300 : 200)
-                    });
+                    if (is2D) {
+                        await viewer.flyTo(orthoLayer, { duration: 1.2 });
+                    } else {
+                        await viewer.flyTo(tileset, {
+                            duration: 1.2,
+                            offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
+                        });
+                    }
                     viewer.scene.requestRender();
                 });
 
@@ -623,20 +628,18 @@
                     });
                 }
 
-                // --- CONTROL SWITCH 2D / 3D (FONDO TRANSPARENTE EN 2D Y ORTOFOTO VISIBLE) ---
+                // --- CONTROL SWITCH 2D / 3D ESTRICTO ---
                 const toggleButton = document.getElementById('toggle2D3D');
                 toggleButton.addEventListener('click', async () => {
                     if (!is2D) {
+                        // --- CAMBIAR A VISTA 2D: Apagar 3D, Encender Esri y Ortofoto del Dron ---
                         viewer.scene.morphTo2D(1.5);
                         viewer.scene.globe.show = true;
-                        esriLayer.show = true;
+                        viewer.scene.backgroundColor = Cesium.Color.TRANSPARENT; // Fondo transparente para evitar marcos
                         
-                        // Fondo transparente nativo en 2D para que Esri luzca limpio sin recuadro oscuro
-                        viewer.scene.backgroundColor = Cesium.Color.TRANSPARENT;
-                        
-                        // Ocultar modelo 3D para liberar GPU en 2D, pero mantener ortofoto visible
-                        if (tileset) tileset.show = false;
-                        if (orthoLayer) orthoLayer.show = true;
+                        esriLayer.show = true;   // Mapa base Esri
+                        orthoLayer.show = true;  // Ortofoto de dron visible en planta 2D
+                        if (tileset) tileset.show = false; // Apagar modelo 3D para liberar GPU
 
                         toggleButton.textContent = '🌐 Cambiar a Vista 3D';
                         is2D = true;
@@ -647,24 +650,19 @@
                         btnSection.disabled = true;
 
                         setTimeout(async () => {
-                            await viewer.flyTo(tileset, {
-                                duration: 1.0,
-                                offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-90), 300)
-                            });
+                            await viewer.flyTo(orthoLayer, { duration: 1.0 });
                             viewer.scene.requestRender();
                         }, 1600);
                     } else {
+                        // --- CAMBIAR A VISTA 3D: Encender Modelo 3D, Apagar Ortofoto y Esri ---
                         viewer.scene.morphTo3D(1.5);
                         viewer.scene.globe.show = true;
-                        
-                        // Restaurar fondo oscuro corporativo solo en 3D para ocultar bordes DEM
                         viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
                         viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
-                        esriLayer.show = false;
                         
-                        // Volver a mostrar el modelo 3D del tajo
-                        if (tileset) tileset.show = true;
-                        if (orthoLayer) orthoLayer.show = true;
+                        esriLayer.show = false;  // Esri oculto en 3D
+                        orthoLayer.show = false; // Ortofoto de dron oculta en 3D (solo se usa el tajo 3D)
+                        if (tileset) tileset.show = true; // Modelo 3D activo
 
                         toggleButton.textContent = '🌐 Cambiar a Vista 2D';
                         is2D = false;
