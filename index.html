@@ -82,7 +82,7 @@
             color: #ffffff;
         }
 
-        /* Brújula Ejecutiva Vectorial (150px) */
+        /* Brújula Ejecutiva Vectorial (100px) */
         #compass-container {
             position: absolute;
             top: 20px;
@@ -186,13 +186,16 @@
             viewer.scene.screenSpaceCameraController.maximumZoomDistance = 50000; 
 
             try {
-                // --- 1. CARGAR MAPA BASE SATELITAL DESDE CESIUM ION ---
-                // Si tienes un Asset ID específico para tu "2D Satellite", reemplaza el '2' por tu número de ID.
-                const satelliteAssetId = 3830182; // ID por defecto de Cesium World Imagery (o cámbialo por tu ID propio)
-                const baseSatelliteProvider = await Cesium.IonImageryProvider.fromAssetId(satelliteAssetId);
+                // --- 1. CARGAR MAPA BASE SATELITAL DE ENTORNO (Esri World Imagery) ---
+                // Esto elimina cualquier error de tipo incompatible en Cesium ion
+                const baseSatelliteProvider = new Cesium.UrlTemplateImageryProvider({
+                    url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                    maximumLevel: 19,
+                    credit: 'Esri World Imagery'
+                });
                 viewer.imageryLayers.addImageryProvider(baseSatelliteProvider);
 
-                // --- 2. CARGAR ORTOFOTO PRINCIPAL ---
+                // --- 2. CARGAR ORTOFOTO LOCAL EN ALTA DEFINICIÓN ---
                 const orthoAssetId = 6134167; 
                 const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId, {
                     maximumLevel: 19 
@@ -215,7 +218,7 @@
                     offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
                 });
 
-                console.log('Visor configurado con satélite base de entorno y ortofoto local.');
+                console.log('Visor inicializado con éxito: mapa base satelital y modelo cargados.');
 
                 // Brújula ejecutiva (preRender)
                 const compassArrow = document.getElementById('compass-arrow');
