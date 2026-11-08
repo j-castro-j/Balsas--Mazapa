@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cañada Balsas - Visor con Secciones y DEM</title>
+    <title>Cañada Balsas - Visor con Secciones Dinámicas</title>
     
     <!-- Estilos de CesiumJS -->
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
@@ -22,7 +22,7 @@
             touch-action: none;
         }
 
-        /* Contenedor Principal: Pantalla Dividida Flexbox */
+        /* Contenedor Principal: Pantalla Completa por Defecto */
         #app-layout {
             display: flex;
             flex-direction: column;
@@ -30,26 +30,38 @@
             height: 100vh;
         }
 
-        /* Mitad Superior: Visor Cesium (60% inicial o 100% si se oculta sección) */
+        /* Visor Cesium: Ocupa 100% por defecto */
         #cesiumContainer {
             width: 100%;
-            height: 60%;
+            height: 100%;
             position: relative;
-            transition: height 0.3s ease;
+            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* Mitad Inferior: Panel de Perfil Topográfico (40%) */
+        /* Panel de Perfil Inferior: Oculto (0%) por defecto */
         #profile-container {
             width: 100%;
-            height: 40%;
-            background: rgba(20, 30, 45, 0.96);
-            border-top: 2px solid #B6812F;
+            height: 0%;
+            background: rgba(20, 30, 45, 0.97);
+            border-top: 0px solid #B6812F;
             display: flex;
             flex-direction: column;
             box-sizing: border-box;
-            padding: 10px 15px;
+            padding: 0 15px;
             position: relative;
+            overflow: hidden;
+            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s ease, border-top 0.35s ease;
             box-shadow: 0 -4px 20px rgba(0,0,0,0.6);
+        }
+
+        /* ESTADO ACTIVO: Cuando se divide la pantalla al generar sección */
+        #app-layout.split-active #cesiumContainer {
+            height: 60%;
+        }
+        #app-layout.split-active #profile-container {
+            height: 40%;
+            padding: 10px 15px;
+            border-top: 2px solid #B6812F;
         }
 
         #profile-header {
@@ -88,7 +100,7 @@
             pointer-events: none;
         }
 
-        /* Indicador de Carga Estilo Ejecutivo */
+        /* Indicador Visual de Carga */
         #loading-indicator {
             position: absolute;
             top: 15px;
@@ -257,7 +269,7 @@
         <div id="profile-container">
             <div id="profile-header">
                 <span>📈 PERFIL TOPOGRÁFICO TRANSVERSAL (DEM)</span>
-                <span id="profile-info" style="color: #fff; font-family: monospace; font-size: 11px;">Haga clic en 'Generar Sección' y seleccione 2 puntos en el tajo...</span>
+                <span id="profile-info" style="color: #fff; font-family: monospace; font-size: 11px;">Seleccione punto inicial y final en el tajo...</span>
             </div>
             <div id="profile-canvas-wrapper">
                 <canvas id="sectionChart"></canvas>
@@ -271,7 +283,7 @@
         Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImFveUJVMGZrSnJLaDY4YnAiLCJqdGkiOiI3YTAzYzNiNi04M2Y0LTQzNTYtYTUwZS0xZjFlYjRiYTFiMDEiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBCYWxzYXMgV0dTODQiLCJpYXQiOjE3OTQxNDg3OTR9.LmMadfxwRLLqVzBvfdqgrtytkdqtiiIawye9J63QEwI'; 
 
         let viewer, profileChart;
-        let activeMode = 'NONE'; // 'NONE', 'DISTANCE', 'AREA', 'SECTION'
+        let activeMode = 'NONE';
         let activePoints = [];
         let activeEntities = [];
         let is2D = false;
@@ -304,7 +316,7 @@
                 const orthoAssetId = 6134167;           // Ortofoto de alta resolución
                 const terrainAssetId = 6134324;  // <--- REEMPLAZA CON EL ID DE TU DEM EN CESIUM ION
 
-                // 1. Cargar el Terreno (DEM) oficial procesado en Cesium ion
+                // 1. Cargar el Terreno (DEM)
                 const terrainProvider = await Cesium.CesiumTerrainProvider.fromIonAssetId(terrainAssetId);
                 viewer.terrainProvider = terrainProvider;
 
@@ -328,13 +340,13 @@
 
                 // 4. Cargar Modelo 3D (3D Tileset)
                 const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
-                tileset.maximumScreenSpaceError = 3; // Mayor detalle visual
+                tileset.maximumScreenSpaceError = 3; 
                 tileset.skipLevelOfDetail = false;   
                 tileset.immediatelyLoadDesiredLevelOfDetail = true; 
 
                 viewer.scene.primitives.add(tileset);
 
-                // --- INDICADOR VISUAL DE CARGA DE TESELAS ---
+                // --- INDICADOR VISUAL DE CARGA ---
                 const loadingIndicator = document.getElementById('loading-indicator');
                 tileset.loadProgress.addEventListener((numberOfTilesLoading) => {
                     if (numberOfTilesLoading > 0) {
@@ -350,9 +362,9 @@
                     offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
                 });
 
-                console.log('Visor, DEM y módulos inicializados con éxito.');
+                console.log('Visor y DEM inicializados correctamente.');
 
-                // Inicializar Gráfica Chart.js para Secciones
+                // Inicializar Gráfica Chart.js
                 initChart();
 
                 // Brújula rotativa
@@ -387,18 +399,19 @@
                     });
                 });
 
-                // --- GESTIÓN DE HERRAMIENTAS (MEDICIÓN Y SECCIONES) ---
+                // --- GESTIÓN DE HERRAMIENTAS ---
                 const btnDist = document.getElementById('btnMeasureDist');
                 const btnArea = document.getElementById('btnMeasureArea');
                 const btnSection = document.getElementById('btnSection');
                 const btnClear = document.getElementById('btnClearMeasure');
+                const appLayout = document.getElementById('app-layout');
 
                 btnDist.addEventListener('click', () => {
                     if (is2D) return;
                     resetAllTools();
                     activeMode = 'DISTANCE';
                     btnDist.classList.add('active');
-                    coordsHud.innerHTML = `Modo: Medir Distancia (Clic puntos, doble clic fin)`;
+                    coordsHud.innerHTML = `Modo: Medir Distancia`;
                 });
 
                 btnArea.addEventListener('click', () => {
@@ -406,7 +419,7 @@
                     resetAllTools();
                     activeMode = 'AREA';
                     btnArea.classList.add('active');
-                    coordsHud.innerHTML = `Modo: Medir Área (Clic vértices, doble clic cerrar)`;
+                    coordsHud.innerHTML = `Modo: Medir Área`;
                 });
 
                 btnSection.addEventListener('click', () => {
@@ -414,7 +427,12 @@
                     resetAllTools();
                     activeMode = 'SECTION';
                     btnSection.classList.add('active');
-                    document.getElementById('profile-info').textContent = 'Seleccione punto inicial y final de la sección en el tajo...';
+                    
+                    // DIVIDIR LA PANTALLA DINÁMICAMENTE
+                    appLayout.classList.add('split-active');
+                    setTimeout(() => viewer.resize(), 350); // Forzar reescalado fluido de Cesium
+
+                    document.getElementById('profile-info').textContent = 'Seleccione inicio y fin de la sección en el tajo...';
                 });
 
                 btnClear.addEventListener('click', () => {
@@ -430,13 +448,16 @@
                     btnArea.classList.remove('active');
                     btnSection.classList.remove('active');
                     
+                    // CERRAR PANTALLA DIVIDIDA Y VOLVER A 100%
+                    appLayout.classList.remove('split-active');
+                    setTimeout(() => viewer.resize(), 350);
+
                     profileChart.data.labels = [];
                     profileChart.data.datasets[0].data = [];
                     profileChart.update();
-                    document.getElementById('profile-info').textContent = 'Herramientas limpiadas.';
                 }
 
-                // --- CLIC EN EL VISOR PARA DISTANCIAS, ÁREAS Y SECCIONES ---
+                // --- CLIC EN EL VISOR ---
                 const clickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
                 clickHandler.setInputAction(async (click) => {
@@ -490,7 +511,6 @@
                         activeMode = 'NONE';
                         btnSection.classList.remove('active');
 
-                        // Trazar línea de sección en planta
                         const lineEntity = viewer.entities.add({
                             polyline: {
                                 positions: [...activePoints],
@@ -504,7 +524,7 @@
                     }
                 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-                // --- FUNCIÓN DE MUESTREO DE PERFIL CON EL DEM ---
+                // --- MUESTREO DEM Y CHART.JS ---
                 async function generateDemProfile(p1, p2) {
                     document.getElementById('profile-info').textContent = 'Calculando perfil de elevación sobre el DEM...';
                     const numSamples = 80;
@@ -519,7 +539,6 @@
                     }
 
                     try {
-                        // Consultar el terreno (DEM) con el máximo nivel de detalle disponible en Cesium ion
                         const updatedPositions = await Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, positions);
                         const distances = [];
                         const elevations = [];
@@ -531,7 +550,6 @@
                             elevations.push(parseFloat(alt));
                         }
 
-                        // Actualizar Gráfica Chart.js
                         profileChart.data.labels = distances;
                         profileChart.data.datasets[0].data = elevations;
                         profileChart.update();
@@ -543,7 +561,6 @@
                     }
                 }
 
-                // --- CONFIGURACIÓN DE CHART.JS ---
                 function initChart() {
                     const ctx = document.getElementById('sectionChart').getContext('2d');
                     profileChart = new Chart(ctx, {
