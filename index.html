@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visor Topográfico 3D / 2D - Balsas - Mazapa</title>
+    <title>Visor Topográfico 3D / 2D - WGS84</title>
     
     <!-- Estilos oficiales de CesiumJS -->
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
@@ -16,6 +16,7 @@
             padding: 0;
             overflow: hidden;
             font-family: sans-serif;
+            background-color: #000; /* Fondo negro limpio */
         }
 
         /* Estilo para el panel de control flotante */
@@ -62,7 +63,7 @@
 
     <script>
         // Configura tu token de Cesium ion
-        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImFveUJVMGZrSnJLaDY4YnAiLCJqdGkiOiI3YTAzYzNiNi04M2Y0LTQzNTYtYTUwZS0xZjFlYjRiYTFiMDEiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBCYWxzYXMgV0dTODQiLCJpYXQiOjE3OTQxNDg3OTR9.LmMadfxwRLLqVzBvfdqgrtytkdqtiiIawye9J63QEwI'; // Asegúrate de mantener tu token completo aquí
+        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImFveUJVMGZrSnJLaDY4YnAiLCJqdGkiOiI3YTAzYzNiNi04M2Y0LTQzNTYtYTUwZS0xZjFlYjRiYTFiMDEiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBCYWxzYXMgV0dTODQiLCJpYXQiOjE3OTQxNDg3OTR9.LmMadfxwRLLqVzBvfdqgrtytkdqtiiIawye9J63QEwI'; // Reemplaza con tu token válido
 
         async function initViewer() {
             // 1. Inicializar el visor en WGS84 sin imagery por defecto
@@ -71,13 +72,19 @@
                 baseLayerPicker: false,
                 timeline: false,
                 animation: false,
-                scene3DOnly: false // Debe estar en false para permitir la transición al modo 2D
+                scene3DOnly: false 
             });
 
+            // Ocultar la esfera azul (globo terráqueo) y la atmósfera para dejar el visor limpio
+            viewer.scene.globe.show = false;
+            viewer.scene.skyAtmosphere.show = false;
+
             try {
-                // 2. Cargar la Ortofoto directamente desde Cesium ion
+                // 2. Cargar la Ortofoto desde Cesium ion limitando el nivel máximo para evitar errores 404
                 const orthoAssetId = 6134167; 
-                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
+                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId, {
+                    maximumLevel: 15 // Ajusta este valor si tu ortofoto soporta mayor detalle (ej. 16 o 17)
+                });
                 viewer.imageryLayers.addImageryProvider(orthoProvider);
 
                 // 3. Cargar el Modelo 3D (3D Tileset) directamente desde Cesium ion
@@ -91,7 +98,7 @@
                     offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 500)
                 });
 
-                console.log('Visor inicializado correctamente con recursos de Cesium ion.');
+                console.log('Visor limpio inicializado correctamente.');
 
                 // --- 5. Lógica del Control Switch 2D / 3D ---
                 let is2D = false;
@@ -99,12 +106,10 @@
 
                 toggleButton.addEventListener('click', () => {
                     if (!is2D) {
-                        // Cambiar a vista plana 2D (ideal para inspeccionar la ortofoto en planta)
                         viewer.scene.morphTo2D(1.5);
                         toggleButton.textContent = 'Cambiar a Vista 3D';
                         is2D = true;
                     } else {
-                        // Regresar al entorno tridimensional
                         viewer.scene.morphTo3D(1.5);
                         toggleButton.textContent = 'Cambiar a Vista 2D (Ortofoto)';
                         is2D = false;
