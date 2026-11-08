@@ -272,6 +272,7 @@
         Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImFveUJVMGZrSnJLaDY4YnAiLCJqdGkiOiI3YTAzYzNiNi04M2Y0LTQzNTYtYTUwZS0xZjFlYjRiYTFiMDEiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBCYWxzYXMgV0dTODQiLCJpYXQiOjE3OTQxNDg3OTR9.LmMadfxwRLLqVzBvfdqgrtytkdqtiiIawye9J63QEwI'; 
 
         let viewer, profileChart, tileset, orthoLayer, esriLayer;
+        let terrainProvider3D, ellipsoidTerrainProvider;
         let activeMode = 'NONE';
         let activePoints = [];
         let activeEntities = [];
@@ -309,9 +310,11 @@
                 const orthoAssetId = 6134167;           
                 const terrainAssetId = 6134324;  // <--- ID DE TU DEM EN CESIUM ION
 
-                // 1. Cargar el Terreno DEM oficial
-                const terrainProvider = await Cesium.CesiumTerrainProvider.fromIonAssetId(terrainAssetId);
-                viewer.terrainProvider = terrainProvider;
+                // 1. Proveedores de Terreno (DEM 3D y Elipsoide plano para 2D)
+                terrainProvider3D = await Cesium.CesiumTerrainProvider.fromIonAssetId(terrainAssetId);
+                ellipsoidTerrainProvider = new Cesium.EllipsoidTerrainProvider();
+                
+                viewer.terrainProvider = terrainProvider3D; // Arranca en 3D con el DEM
 
                 // 2. Capa Esri World Imagery (Fondo base en modo 2D)
                 const esriImageryProvider = new Cesium.UrlTemplateImageryProvider({
@@ -320,12 +323,12 @@
                     credit: 'Esri World Imagery'
                 });
                 esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
-                esriLayer.show = false;
+                esriLayer.show = false; // Oculto en 3D
 
-                // 3. Ortofoto Local del Dron (Sin forzar niveles para evitar errores 404 y cuadros negros)
+                // 3. Ortofoto Local del Dron (Visible en 2D)
                 const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
                 orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
-                orthoLayer.show = false; 
+                orthoLayer.show = false; // Oculto en 3D
                 orthoLayer.maximumAnisotropy = viewer.maximumAnisotropy;
                 orthoLayer.minificationFilter = Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR;
                 orthoLayer.magnificationFilter = Cesium.TextureMagnificationFilter.LINEAR;
@@ -625,18 +628,20 @@
                     });
                 }
 
-                // --- CONTROL SWITCH 2D / 3D CORREGIDO Y CENTRADO EN LA OBRA ---
+                // --- CONTROL SWITCH 2D / 3D CON GESTIÓN DE TERRENO PARA ELIMINAR EL CUADRO NEGRO ---
                 const toggleButton = document.getElementById('toggle2D3D');
                 toggleButton.addEventListener('click', async () => {
                     if (!is2D) {
-                        // Cambiar a Vista 2D
+                        // --- CAMBIAR A VISTA 2D ---
                         viewer.scene.morphTo2D(1.5);
                         viewer.scene.globe.show = true;
-                        viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
                         
-                        esriLayer.show = true;   
-                        orthoLayer.show = true;  
-                        if (tileset) tileset.show = false; 
+                        // Quitar el DEM local en 2D para que no dibuje el marco negro del límite del raster
+                        viewer.terrainProvider = ellipsoidTerrainProvider; 
+
+                        esriLayer.show = true;   // Mapa base Esri
+                        orthoLayer.show = true;  // Ortofoto de dron arriba de Esri
+                        if (tileset) tileset.show = false; // Ocultar modelo 3D (libera GPU)
 
                         toggleButton.textContent = '🌐 Cambiar a Vista 3D';
                         is2D = true;
@@ -655,15 +660,19 @@
                             viewer.scene.requestRender();
                         }, 1600);
                     } else {
-                        // Cambiar a Vista 3D
+                        // --- REGRESAR A VISTA 3D ---
                         viewer.scene.morphTo3D(1.5);
                         viewer.scene.globe.show = true;
+                        
+                        // Restaurar el DEM personalizado de alta precisión para 3D y secciones
+                        viewer.terrainProvider = terrainProvider3D;
+
                         viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
                         viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
                         
-                        esriLayer.show = false;  
-                        orthoLayer.show = false; 
-                        if (tileset) tileset.show = true; 
+                        esriLayer.show = false;  // Esri oculto en 3D
+                        orthoLayer.show = false; // Ortofoto oculta en 3D (se usa el tileset 3D texturizado)
+                        if (tileset) tileset.show = true; // Modelo 3D activo
 
                         toggleButton.textContent = '🌐 Cambiar a Vista 2D';
                         is2D = false;
