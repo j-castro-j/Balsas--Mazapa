@@ -160,6 +160,7 @@
     <!-- Barra Vertical de Herramientas -->
     <div id="vertical-toolbox">
         <button id="toggle2D3D" class="cesium-button">🌐 Cambiar a Vista 2D</button>
+        <button id="btnRecenter" class="cesium-button" style="border-left: 4px solid #f3d07e;">🎯 Recentrar Vista</button>
         <button id="btnMeasureDist" class="cesium-button">📏 Medir Distancia</button>
         <button id="btnMeasureArea" class="cesium-button">📐 Medir Área</button>
         <button id="btnClearMeasure" class="cesium-button" style="background: #5a2222; border-color: #aa4444;">🧹 Limpiar</button>
@@ -183,7 +184,7 @@
         </div>
     </div>
 
-    <!-- HUD de Coordenadas con Nota de Referencia (Planta WGS84 / Vertical INEGI 1997) -->
+    <!-- HUD de Coordenadas con Nota de Referencia -->
     <div id="coords-hud">
         Lat: 0.000000° | Lon: 0.000000° | Alt: 0.00 m<br>
         <span style="font-size: 9.5px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>
@@ -246,7 +247,7 @@
                     offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
                 });
 
-                console.log('Visor inicializado correctamente.');
+                console.log('Visor inicializado correctamente con botón de recentrado.');
 
                 // Brújula rotativa sincronizada con la cámara
                 const compassRose = document.getElementById('compass-rose');
@@ -271,6 +272,26 @@
                         coordsHud.innerHTML = `Fuera de cobertura<br><span style="font-size: 9.5px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
                     }
                 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+                // --- LÓGICA DE RECENTRADO ---
+                let is2D = false;
+                const btnRecenter = document.getElementById('btnRecenter');
+
+                btnRecenter.addEventListener('click', async () => {
+                    if (is2D) {
+                        // Recentrar en vista 2D cenital
+                        await viewer.flyTo(tileset, {
+                            duration: 1.0,
+                            offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-90), 300)
+                        });
+                    } else {
+                        // Recentrar en vista 3D volumétrica
+                        await viewer.flyTo(tileset, {
+                            duration: 1.2,
+                            offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
+                        });
+                    }
+                });
 
                 // LÓGICA DE MEDICIÓN
                 let measureMode = 'NONE';
@@ -357,8 +378,7 @@
                     }
                 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-                // Control Switch 2D / 3D (Desactiva herramientas de medición en 2D)
-                let is2D = false;
+                // Control Switch 2D / 3D
                 const toggleButton = document.getElementById('toggle2D3D');
 
                 toggleButton.addEventListener('click', async () => {
@@ -369,7 +389,6 @@
                         toggleButton.textContent = '🌐 Cambiar a Vista 3D';
                         is2D = true;
 
-                        // Deshabilitar herramientas de medición en 2D y limpiar trazos activos
                         resetMeasurement();
                         btnDist.disabled = true;
                         btnArea.disabled = true;
@@ -378,7 +397,7 @@
                         setTimeout(async () => {
                             await viewer.flyTo(tileset, {
                                 duration: 1.0,
-                                offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-90), 250)
+                                offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-90), 300)
                             });
                         }, 1600);
 
@@ -389,7 +408,6 @@
                         toggleButton.textContent = '🌐 Cambiar a Vista 2D';
                         is2D = false;
 
-                        // Rehabilitar herramientas de medición en 3D
                         btnDist.disabled = false;
                         btnArea.disabled = false;
                         btnClear.disabled = false;
