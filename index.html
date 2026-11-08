@@ -310,11 +310,11 @@
                 const orthoAssetId = 6134167;           
                 const terrainAssetId = 6134324;  // <--- ID DE TU DEM EN CESIUM ION
 
-                // 1. Proveedores de Terreno (DEM 3D y Elipsoide plano para 2D)
+                // 1. Proveedores de Terreno
                 terrainProvider3D = await Cesium.CesiumTerrainProvider.fromIonAssetId(terrainAssetId);
                 ellipsoidTerrainProvider = new Cesium.EllipsoidTerrainProvider();
                 
-                viewer.terrainProvider = terrainProvider3D; // Arranca en 3D con el DEM
+                viewer.terrainProvider = terrainProvider3D;
 
                 // 2. Capa Esri World Imagery (Fondo base en modo 2D)
                 const esriImageryProvider = new Cesium.UrlTemplateImageryProvider({
@@ -323,17 +323,19 @@
                     credit: 'Esri World Imagery'
                 });
                 esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
-                esriLayer.show = false; // Oculto en 3D
+                esriLayer.show = false;
 
-                // 3. Ortofoto Local del Dron (Visible en 2D)
-                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
+                // 3. Ortofoto Local del Dron con nivel máximo limitado (Evita errores 404 y el recuadro negro)
+                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId, {
+                    maximumLevel: 17 // <--- LÍMITE CLAVE: Evita que Cesium pida niveles inexistentes y pinte negro
+                });
                 orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
-                orthoLayer.show = false; // Oculto en 3D
+                orthoLayer.show = false; 
                 orthoLayer.maximumAnisotropy = viewer.maximumAnisotropy;
                 orthoLayer.minificationFilter = Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR;
                 orthoLayer.magnificationFilter = Cesium.TextureMagnificationFilter.LINEAR;
 
-                // 4. Cargar Modelo 3D (3D Tileset) - Activo en 3D
+                // 4. Cargar Modelo 3D (3D Tileset)
                 tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
                 tileset.maximumScreenSpaceError = 3; 
                 tileset.skipLevelOfDetail = false;   
@@ -628,7 +630,7 @@
                     });
                 }
 
-                // --- CONTROL SWITCH 2D / 3D CON GESTIÓN DE TERRENO PARA ELIMINAR EL CUADRO NEGRO ---
+                // --- CONTROL SWITCH 2D / 3D CON LÍMITE DE NIVEL DE ORTOFOTO Y TERRENO PLANO ---
                 const toggleButton = document.getElementById('toggle2D3D');
                 toggleButton.addEventListener('click', async () => {
                     if (!is2D) {
@@ -636,12 +638,11 @@
                         viewer.scene.morphTo2D(1.5);
                         viewer.scene.globe.show = true;
                         
-                        // Quitar el DEM local en 2D para que no dibuje el marco negro del límite del raster
                         viewer.terrainProvider = ellipsoidTerrainProvider; 
 
-                        esriLayer.show = true;   // Mapa base Esri
-                        orthoLayer.show = true;  // Ortofoto de dron arriba de Esri
-                        if (tileset) tileset.show = false; // Ocultar modelo 3D (libera GPU)
+                        esriLayer.show = true;   
+                        orthoLayer.show = true;  
+                        if (tileset) tileset.show = false; 
 
                         toggleButton.textContent = '🌐 Cambiar a Vista 3D';
                         is2D = true;
@@ -652,10 +653,10 @@
                         btnSection.disabled = true;
 
                         setTimeout(async () => {
-                            // Centrar exactamente sobre la ortofoto del tajo en 2D
+                            // Centrar exactamente sobre la ortofoto del tajo en 2D sin errores 404
                             await viewer.flyTo(orthoLayer, {
                                 duration: 1.2,
-                                offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-90), 500)
+                                offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-90), 800)
                             });
                             viewer.scene.requestRender();
                         }, 1600);
@@ -664,15 +665,14 @@
                         viewer.scene.morphTo3D(1.5);
                         viewer.scene.globe.show = true;
                         
-                        // Restaurar el DEM personalizado de alta precisión para 3D y secciones
                         viewer.terrainProvider = terrainProvider3D;
 
                         viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
                         viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
                         
-                        esriLayer.show = false;  // Esri oculto en 3D
-                        orthoLayer.show = false; // Ortofoto oculta en 3D (se usa el tileset 3D texturizado)
-                        if (tileset) tileset.show = true; // Modelo 3D activo
+                        esriLayer.show = false;  
+                        orthoLayer.show = false; 
+                        if (tileset) tileset.show = true; 
 
                         toggleButton.textContent = '🌐 Cambiar a Vista 2D';
                         is2D = false;
