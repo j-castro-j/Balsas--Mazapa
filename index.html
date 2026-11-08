@@ -1,37 +1,122 @@
-// Configura tu token de Cesium ion
-Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImFveUJVMGZrSnJLaDY4YnAiLCJqdGkiOiI3YTAzYzNiNi04M2Y0LTQzNTYtYTUwZS0xZjFlYjRiYTFiMDEiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBCYWxzYXMgV0dTODQiLCJpYXQiOjE3OTQxNDg3OTR9.LmMadfxwRLLqVzBvfdqgrtytkdqtiiIawye9J63QEwI';
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor Topográfico 3D / 2D - WGS84</title>
+    
+    <!-- Estilos oficiales de CesiumJS -->
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    
+    <style>
+        html, body, #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: sans-serif;
+        }
 
-async function initViewer() {
-    // 1. Inicializar el visor en WGS84 sin imagery por defecto
-    const viewer = new Cesium.Viewer('cesiumContainer', {
-        imageryProvider: false,
-        baseLayerPicker: false,
-        timeline: false,
-        animation: false,
-        scene3DOnly: true
-    });
+        /* Estilo para el panel de control flotante */
+        #toolbar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(42, 42, 42, 0.85);
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
 
-    try {
-        // 2. Cargar la Ortofoto directamente desde Cesium ion mediante su Asset ID
-        const orthoAssetId = 6134167; // Reemplaza con el ID de tu ortofoto en Cesium ion
-        const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
-        viewer.imageryLayers.addImageryProvider(orthoProvider);
+        .cesium-button {
+            background: #303336;
+            border: 1px solid #444;
+            color: #edffff;
+            padding: 8px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
 
-        // 3. Cargar el Modelo 3D (3D Tileset) directamente desde Cesium ion
-        const tilesetAssetId = 6134163; // Reemplaza con el ID de tu modelo 3D en Cesium ion
-        const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
-        viewer.scene.primitives.add(tileset);
+        .cesium-button:hover {
+            background: #484b4e;
+        }
+    </style>
+</head>
+<body>
 
-        // 4. Enfocar la cámara automáticamente en el modelo cargado
-        await viewer.flyTo(tileset, {
-            duration: 2.0,
-            offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 500)
-        });
+    <!-- Contenedor del Visor -->
+    <div id="cesiumContainer"></div>
 
-        console.log('Visor WGS84 inicializado correctamente con recursos de Cesium ion.');
-    } catch (error) {
-        console.error('Error al inicializar los recursos de Cesium ion:', error);
-    }
-}
+    <!-- Panel de Controles UI -->
+    <div id="toolbar">
+        <button id="toggle2D3D" class="cesium-button">Cambiar a Vista 2D (Ortofoto)</button>
+    </div>
 
-initViewer();
+    <!-- Librería principal de CesiumJS -->
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"></script>
+
+    <script>
+        // Configura tu token de Cesium ion
+        Cesium.Ion.defaultAccessToken = 'eyJhbGciOi...'; // Asegúrate de mantener tu token completo aquí
+
+        async function initViewer() {
+            // 1. Inicializar el visor en WGS84 sin imagery por defecto
+            const viewer = new Cesium.Viewer('cesiumContainer', {
+                imageryProvider: false,
+                baseLayerPicker: false,
+                timeline: false,
+                animation: false,
+                scene3DOnly: false // Debe estar en false para permitir la transición al modo 2D
+            });
+
+            try {
+                // 2. Cargar la Ortofoto directamente desde Cesium ion
+                const orthoAssetId = 6134167; 
+                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
+                viewer.imageryLayers.addImageryProvider(orthoProvider);
+
+                // 3. Cargar el Modelo 3D (3D Tileset) directamente desde Cesium ion
+                const tilesetAssetId = 6134163; 
+                const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
+                viewer.scene.primitives.add(tileset);
+
+                // 4. Enfocar la cámara automáticamente en el modelo cargado
+                await viewer.flyTo(tileset, {
+                    duration: 2.0,
+                    offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 500)
+                });
+
+                console.log('Visor inicializado correctamente con recursos de Cesium ion.');
+
+                // --- 5. Lógica del Control Switch 2D / 3D ---
+                let is2D = false;
+                const toggleButton = document.getElementById('toggle2D3D');
+
+                toggleButton.addEventListener('click', () => {
+                    if (!is2D) {
+                        // Cambiar a vista plana 2D (ideal para inspeccionar la ortofoto en planta)
+                        viewer.scene.morphTo2D(1.5);
+                        toggleButton.textContent = 'Cambiar a Vista 3D';
+                        is2D = true;
+                    } else {
+                        // Regresar al entorno tridimensional
+                        viewer.scene.morphTo3D(1.5);
+                        toggleButton.textContent = 'Cambiar a Vista 2D (Ortofoto)';
+                        is2D = false;
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error al inicializar los recursos de Cesium ion:', error);
+            }
+        }
+
+        initViewer();
+    </script>
+</body>
+</html>
