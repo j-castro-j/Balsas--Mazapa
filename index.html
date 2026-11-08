@@ -2,9 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cañada Balsas - Visor Ejecutivo Minero</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor Cesium - Cañada Balsas</title>
     <!-- Estilos de CesiumJS -->
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
     
@@ -220,8 +219,8 @@
             viewer.scene.screenSpaceCameraController.maximumZoomDistance = 50000; 
 
             try {
-                const tilesetAssetId = 6134163; // Modelo 3D[cite: 8]
-                const orthoAssetId = 6134167;   // Ortofoto[cite: 8]
+                const tilesetAssetId = 6134163; // Modelo 3D
+                const orthoAssetId = 6134167;   // Ortofoto
 
                 // 1. Capa Esri World Imagery (Fondo base global para 2D)
                 const esriImageryProvider = new Cesium.UrlTemplateImageryProvider({
@@ -236,6 +235,10 @@
                 const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
                 orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
                 orthoLayer.show = false; 
+                
+                // --- SOLUCIÓN: FORZAR TRANSPARENCIA EN PÍXELES NEGROS ---
+                orthoLayer.colorToAlpha = Cesium.Color.BLACK;
+                orthoLayer.colorToAlphaThreshold = 0.05; // Ajusta entre 0.01 y 0.1 si quedan halos oscuros
                 
                 // --- FORZAR MÁXIMA NITIDEZ Y FILTRADO GRÁFICO ---
                 orthoLayer.maximumAnisotropy = 16; // Máximo detalle en vistas sesgadas/inclinadas
