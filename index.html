@@ -183,6 +183,7 @@
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"></script>
 
     <script>
+        // Configura tu token de Cesium ion
         Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImFveUJVMGZrSnJLaDY4YnAiLCJqdGkiOiI3YTAzYzNiNi04M2Y0LTQzNTYtYTUwZS0xZjFlYjRiYTFiMDEiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBCYWxzYXMgV0dTODQiLCJpYXQiOjE3OTQxNDg3OTR9.LmMadfxwRLLqVzBvfdqgrtytkdqtiiIawye9J63QEwI'; 
 
         let viewer, tileset, orthoLayer, esriLayer;
@@ -213,16 +214,16 @@
             viewer.scene.globe.show = true; 
             viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
             viewer.scene.skyAtmosphere.show = false;
-            viewer.scene.globe.depthTestAgainstTerrain = true;
+            viewer.scene.globe.depthTestAgainstTerrain = false;
 
             viewer.scene.screenSpaceCameraController.minimumZoomDistance = 2; 
             viewer.scene.screenSpaceCameraController.maximumZoomDistance = 50000; 
 
             try {
-                const tilesetAssetId = 6134163;         
-                const orthoAssetId = 6134167;           
+                const tilesetAssetId = 6134163; // Modelo 3D[cite: 8]
+                const orthoAssetId = 6134167;   // Ortofoto[cite: 8]
 
-                // 1. Capa Esri World Imagery (Fondo base global en 2D)
+                // 1. Capa Esri World Imagery (Fondo base global para 2D)
                 const esriImageryProvider = new Cesium.UrlTemplateImageryProvider({
                     url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                     maximumLevel: 19,
@@ -231,16 +232,19 @@
                 esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
                 esriLayer.show = false; 
 
-                // 2. Ortofoto Local del Dron (Asegurando orden superior y visibilidad inicial correcta)
-                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId, {
-                    maximumLevel: 14
-                });
+                // 2. Ortofoto Local del Dron A MÁXIMA CALIDAD (Sin restricciones de nivel)
+                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
                 orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
-                orthoLayer.show = false; // Se activará al cambiar a 2D o si lo prefieres visible
+                orthoLayer.show = false; 
+                
+                // --- FORZAR MÁXIMA NITIDEZ Y FILTRADO GRÁFICO ---
+                orthoLayer.maximumAnisotropy = 16; // Máximo detalle en vistas sesgadas/inclinadas
+                orthoLayer.minificationFilter = Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR;
+                orthoLayer.magnificationFilter = Cesium.TextureMagnificationFilter.LINEAR;
 
                 // 3. Cargar Modelo 3D (3D Tileset)
                 tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
-                tileset.maximumScreenSpaceError = 3; 
+                tileset.maximumScreenSpaceError = 2; // Mayor precisión geométrica en el tajo
                 tileset.skipLevelOfDetail = false;   
                 tileset.immediatelyLoadDesiredLevelOfDetail = true; 
 
@@ -413,7 +417,7 @@
                     viewer.scene.requestRender();
                 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-                // --- CONTROL SWITCH 2D / 3D CORREGIDO Y ASEGURADO ---
+                // --- CONTROL SWITCH 2D / 3D ---
                 const toggleButton = document.getElementById('toggle2D3D');
                 toggleButton.addEventListener('click', async () => {
                     if (!is2D) {
@@ -423,7 +427,6 @@
                         
                         esriLayer.show = true;   
                         orthoLayer.show = true;  
-                        // Asegurar que la ortofoto esté por encima de Esri en el stack visual
                         viewer.imageryLayers.raiseToTop(orthoLayer);
 
                         if (tileset) tileset.show = false; 
