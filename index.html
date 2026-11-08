@@ -22,7 +22,6 @@
             touch-action: none;
         }
 
-        /* Contenedor Principal: Pantalla Completa por Defecto */
         #app-layout {
             display: flex;
             flex-direction: column;
@@ -30,7 +29,6 @@
             height: 100vh;
         }
 
-        /* Visor Cesium: Ocupa 100% por defecto */
         #cesiumContainer {
             width: 100%;
             height: 100%;
@@ -38,7 +36,6 @@
             transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* Panel de Perfil Inferior: Oculto (0%) por defecto */
         #profile-container {
             width: 100%;
             height: 0%;
@@ -54,7 +51,6 @@
             box-shadow: 0 -4px 20px rgba(0,0,0,0.6);
         }
 
-        /* ESTADO ACTIVO: Cuando se divide la pantalla al generar sección */
         #app-layout.split-active #cesiumContainer {
             height: 60%;
         }
@@ -81,7 +77,6 @@
             height: calc(100% - 22px);
         }
 
-        /* Título Superior Izquierdo */
         #app-title {
             position: absolute;
             top: 15px;
@@ -100,7 +95,6 @@
             pointer-events: none;
         }
 
-        /* Indicador Visual de Carga */
         #loading-indicator {
             position: absolute;
             top: 15px;
@@ -119,7 +113,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* Barra Vertical de Herramientas */
         #vertical-toolbox {
             position: absolute;
             top: 50%;
@@ -170,7 +163,6 @@
             opacity: 0.6;
         }
 
-        /* Brújula Ejecutiva */
         #compass-container {
             position: absolute;
             top: 15px;
@@ -194,7 +186,6 @@
             transition: transform 0.05s linear;
         }
 
-        /* HUD de Coordenadas */
         #coords-hud {
             position: absolute;
             bottom: 15px;
@@ -225,12 +216,11 @@
 <body>
 
     <div id="app-layout">
-        <!-- VISTA SUPERIOR: PLANTA 3D / 2D -->
+        <!-- VISTA SUPERIOR -->
         <div id="cesiumContainer">
             <div id="app-title">Cañada Balsas - Mazapa / Noviembre 2026</div>
             <div id="loading-indicator">🔄 Cargando teselas y ortofoto...</div>
 
-            <!-- Toolbox Vertical -->
             <div id="vertical-toolbox">
                 <button id="toggle2D3D" class="cesium-button">🌐 Cambiar a Vista 2D</button>
                 <button id="btnRecenter" class="cesium-button" style="border-left: 4px solid #f3d07e;">🎯 Recentrar</button>
@@ -240,7 +230,6 @@
                 <button id="btnClearMeasure" class="cesium-button" style="background: #5a2222; border-color: #aa4444;">🧹 Limpiar Todo</button>
             </div>
 
-            <!-- Brújula -->
             <div id="compass-container">
                 <div id="compass-rose">
                     <svg width="100%" height="100%" viewBox="0 0 100 100">
@@ -258,14 +247,13 @@
                 </div>
             </div>
 
-            <!-- HUD Coordenadas -->
             <div id="coords-hud">
                 Lat: 0.000000° | Lon: 0.000000° | Alt: 0.00 m<br>
                 <span style="font-size: 9px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>
             </div>
         </div>
 
-        <!-- VISTA INFERIOR: PERFIL TRANSVERSAL (DEM) -->
+        <!-- VISTA INFERIOR -->
         <div id="profile-container">
             <div id="profile-header">
                 <span>📈 PERFIL TOPOGRÁFICO TRANSVERSAL (DEM)</span>
@@ -280,12 +268,14 @@
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"></script>
 
     <script>
+        // Configura tu token de Cesium ion
         Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImFveUJVMGZrSnJLaDY4YnAiLCJqdGkiOiI3YTAzYzNiNi04M2Y0LTQzNTYtYTUwZS0xZjFlYjRiYTFiMDEiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBCYWxzYXMgV0dTODQiLCJpYXQiOjE3OTQxNDg3OTR9.LmMadfxwRLLqVzBvfdqgrtytkdqtiiIawye9J63QEwI'; 
 
         let viewer, profileChart;
         let activeMode = 'NONE';
         let activePoints = [];
         let activeEntities = [];
+        let activePolygonEntity = null; // Referencia optimizada para el área
         let is2D = false;
 
         async function initViewer() {
@@ -303,7 +293,8 @@
                 scene3DOnly: false 
             });
 
-            viewer.scene.globe.show = false;
+            viewer.scene.globe.show = true; 
+            viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
             viewer.scene.skyAtmosphere.show = false;
             viewer.scene.globe.depthTestAgainstTerrain = true;
 
@@ -311,12 +302,11 @@
             viewer.scene.screenSpaceCameraController.maximumZoomDistance = 50000; 
 
             try {
-                // --- ASSETS DE CESIUM ION ---
-                const tilesetAssetId = 6134163;         // Modelo 3D del tajo
-                const orthoAssetId = 6134167;           // Ortofoto de alta resolución
-                const terrainAssetId = 6134324;  // <--- REEMPLAZA CON EL ID DE TU DEM EN CESIUM ION
+                const tilesetAssetId = 6134163;         
+                const orthoAssetId = 6134167;           
+                const terrainAssetId = 6134324;  // <--- ID DE TU DEM EN CESIUM ION
 
-                // 1. Cargar el Terreno (DEM)
+                // 1. Cargar el Terreno DEM oficial
                 const terrainProvider = await Cesium.CesiumTerrainProvider.fromIonAssetId(terrainAssetId);
                 viewer.terrainProvider = terrainProvider;
 
@@ -346,7 +336,6 @@
 
                 viewer.scene.primitives.add(tileset);
 
-                // --- INDICADOR VISUAL DE CARGA ---
                 const loadingIndicator = document.getElementById('loading-indicator');
                 tileset.loadProgress.addEventListener((numberOfTilesLoading) => {
                     if (numberOfTilesLoading > 0) {
@@ -362,19 +351,14 @@
                     offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
                 });
 
-                console.log('Visor y DEM inicializados correctamente.');
-
-                // Inicializar Gráfica Chart.js
                 initChart();
 
-                // Brújula rotativa
                 const compassRose = document.getElementById('compass-rose');
                 viewer.scene.preRender.addEventListener(() => {
                     const heading = Cesium.Math.toDegrees(viewer.camera.heading);
                     compassRose.style.transform = `rotate(${-heading}deg)`;
                 });
 
-                // HUD de Coordenadas
                 const coordsHud = document.getElementById('coords-hud');
                 const moveHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
                 
@@ -385,13 +369,13 @@
                         const lat = Cesium.Math.toDegrees(cartographic.latitude).toFixed(6);
                         const lon = Cesium.Math.toDegrees(cartographic.longitude).toFixed(6);
                         const alt = cartographic.height.toFixed(2);
-                        coordsHud.innerHTML = `Lat: ${lat}° | Lon: ${lon}° | Alt: ${alt} m<br><span style="font-size: 9px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
-                    } else {
-                        coordsHud.innerHTML = `Fuera de cobertura<br><span style="font-size: 9px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
+                        
+                        if (activeMode === 'NONE') {
+                            coordsHud.innerHTML = `Lat: ${lat}° | Lon: ${lon}° | Alt: ${alt} m<br><span style="font-size: 9px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
+                        }
                     }
                 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-                // --- BOTÓN RECENTRAR ---
                 document.getElementById('btnRecenter').addEventListener('click', async () => {
                     await viewer.flyTo(tileset, {
                         duration: 1.2,
@@ -399,7 +383,6 @@
                     });
                 });
 
-                // --- GESTIÓN DE HERRAMIENTAS ---
                 const btnDist = document.getElementById('btnMeasureDist');
                 const btnArea = document.getElementById('btnMeasureArea');
                 const btnSection = document.getElementById('btnSection');
@@ -411,7 +394,7 @@
                     resetAllTools();
                     activeMode = 'DISTANCE';
                     btnDist.classList.add('active');
-                    coordsHud.innerHTML = `Modo: Medir Distancia`;
+                    coordsHud.innerHTML = `Modo: Distancia (Clic puntos, 2.º clic mide)`;
                 });
 
                 btnArea.addEventListener('click', () => {
@@ -419,7 +402,7 @@
                     resetAllTools();
                     activeMode = 'AREA';
                     btnArea.classList.add('active');
-                    coordsHud.innerHTML = `Modo: Medir Área`;
+                    coordsHud.innerHTML = `Modo: Área (Agregue vértices en el tajo...)`;
                 });
 
                 btnSection.addEventListener('click', () => {
@@ -428,9 +411,8 @@
                     activeMode = 'SECTION';
                     btnSection.classList.add('active');
                     
-                    // DIVIDIR LA PANTALLA DINÁMICAMENTE
                     appLayout.classList.add('split-active');
-                    setTimeout(() => viewer.resize(), 350); // Forzar reescalado fluido de Cesium
+                    setTimeout(() => viewer.resize(), 350);
 
                     document.getElementById('profile-info').textContent = 'Seleccione inicio y fin de la sección en el tajo...';
                 });
@@ -442,22 +424,45 @@
                 function resetAllTools() {
                     activeMode = 'NONE';
                     activePoints = [];
+                    activePolygonEntity = null;
                     activeEntities.forEach(ent => viewer.entities.remove(ent));
                     activeEntities = [];
                     btnDist.classList.remove('active');
                     btnArea.classList.remove('active');
                     btnSection.classList.remove('active');
                     
-                    // CERRAR PANTALLA DIVIDIDA Y VOLVER A 100%
                     appLayout.classList.remove('split-active');
                     setTimeout(() => viewer.resize(), 350);
 
                     profileChart.data.labels = [];
                     profileChart.data.datasets[0].data = [];
                     profileChart.update();
+                    coordsHud.innerHTML = `Herramientas limpiadas.<br><span style="font-size: 9px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
                 }
 
-                // --- CLIC EN EL VISOR ---
+                // --- FUNCIÓN MATEMÁTICA PARA CÁLCULO DE ÁREA EN METROS CUADRADOS ---
+                function calculatePolygonArea(cartesianPoints) {
+                    if (cartesianPoints.length < 3) return 0;
+                    const refCartographic = Cesium.Cartographic.fromCartesian(cartesianPoints[0]);
+                    const refCenter = Cesium.Cartesian3.fromRadians(refCartographic.longitude, refCartographic.latitude, 0);
+                    
+                    const transform = Cesium.Transforms.eastNorthUpToFixedFrame(refCenter);
+                    const invTransform = Cesium.Matrix4.inverse(transform, new Cesium.Matrix4());
+                    
+                    const localPoints = cartesianPoints.map(pt => {
+                        const localPt = Cesium.Matrix4.multiplyByPoint(invTransform, pt, new Cesium.Cartesian3());
+                        return { x: localPt.x, y: localPt.y };
+                    });
+                    
+                    let area = 0;
+                    for (let i = 0; i < localPoints.length; i++) {
+                        const j = (i + 1) % localPoints.length;
+                        area += localPoints[i].x * localPoints[j].y;
+                        area -= localPoints[j].x * localPoints[i].y;
+                    }
+                    return Math.abs(area / 2.0);
+                }
+
                 const clickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
                 clickHandler.setInputAction(async (click) => {
@@ -491,22 +496,33 @@
                         coordsHud.innerHTML = `Distancia Total: ${totalDist.toFixed(2)} m`;
                     }
 
-                    if (activeMode === 'AREA' && activePoints.length >= 3) {
-                        const existingPoly = activeEntities.find(e => e.polygon);
-                        if (existingPoly) viewer.entities.remove(existingPoly);
-
-                        const polyEntity = viewer.entities.add({
-                            polygon: {
-                                hierarchy: new Cesium.PolygonHierarchy([...activePoints]),
-                                material: Cesium.Color.fromCssColorString('#24415D').withAlpha(0.5),
-                                outline: true,
-                                outlineColor: Cesium.Color.fromCssColorString('#B6812F')
+                    if (activeMode === 'AREA') {
+                        if (activePoints.length >= 3) {
+                            if (!activePolygonEntity) {
+                                // Crear el polígono una sola vez para evitar lag
+                                activePolygonEntity = viewer.entities.add({
+                                    polygon: {
+                                        hierarchy: new Cesium.PolygonHierarchy([...activePoints]),
+                                        material: Cesium.Color.fromCssColorString('#24415D').withAlpha(0.5),
+                                        outline: true,
+                                        outlineColor: Cesium.Color.fromCssColorString('#B6812F')
+                                    }
+                                });
+                                activeEntities.push(activePolygonEntity);
+                            } else {
+                                // Actualizar la jerarquía fluidamente sin destruir la entidad
+                                activePolygonEntity.polygon.hierarchy = new Cesium.PolygonHierarchy([...activePoints]);
                             }
-                        });
-                        activeEntities.push(polyEntity);
+
+                            // Calcular y mostrar área en tiempo real
+                            const areaM2 = calculatePolygonArea(activePoints);
+                            const areaHectareas = areaM2 / 10000;
+                            coordsHud.innerHTML = `Área: ${areaM2.toLocaleString('en-US', {maximumFractionDigits: 2})} m² (${areaHectareas.toFixed(4)} ha) | Vértices: ${activePoints.length}`;
+                        } else {
+                            coordsHud.innerHTML = `Modo Área: Faltan ${3 - activePoints.length} puntos para calcular...`;
+                        }
                     }
 
-                    // --- GENERAR SECCIÓN TRANSVERSAL USANDO EL DEM ---
                     if (activeMode === 'SECTION' && activePoints.length === 2) {
                         activeMode = 'NONE';
                         btnSection.classList.remove('active');
@@ -524,7 +540,6 @@
                     }
                 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-                // --- MUESTREO DEM Y CHART.JS ---
                 async function generateDemProfile(p1, p2) {
                     document.getElementById('profile-info').textContent = 'Calculando perfil de elevación sobre el DEM...';
                     const numSamples = 80;
@@ -598,7 +613,6 @@
                     });
                 }
 
-                // --- CONTROL SWITCH 2D / 3D ---
                 const toggleButton = document.getElementById('toggle2D3D');
                 toggleButton.addEventListener('click', async () => {
                     if (!is2D) {
@@ -621,7 +635,8 @@
                         }, 1600);
                     } else {
                         viewer.scene.morphTo3D(1.5);
-                        viewer.scene.globe.show = false;
+                        viewer.scene.globe.show = true;
+                        viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
                         esriLayer.show = false;
                         toggleButton.textContent = '🌐 Cambiar a Vista 2D';
                         is2D = false;
