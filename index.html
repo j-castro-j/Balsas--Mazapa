@@ -1,0 +1,37 @@
+// Configura tu token de Cesium ion
+Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImFveUJVMGZrSnJLaDY4YnAiLCJqdGkiOiI3YTAzYzNiNi04M2Y0LTQzNTYtYTUwZS0xZjFlYjRiYTFiMDEiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBCYWxzYXMgV0dTODQiLCJpYXQiOjE3OTQxNDg3OTR9.LmMadfxwRLLqVzBvfdqgrtytkdqtiiIawye9J63QEwI';
+
+async function initViewer() {
+    // 1. Inicializar el visor en WGS84 sin imagery por defecto
+    const viewer = new Cesium.Viewer('cesiumContainer', {
+        imageryProvider: false,
+        baseLayerPicker: false,
+        timeline: false,
+        animation: false,
+        scene3DOnly: true
+    });
+
+    try {
+        // 2. Cargar la Ortofoto directamente desde Cesium ion mediante su Asset ID
+        const orthoAssetId = 6134167; // Reemplaza con el ID de tu ortofoto en Cesium ion
+        const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
+        viewer.imageryLayers.addImageryProvider(orthoProvider);
+
+        // 3. Cargar el Modelo 3D (3D Tileset) directamente desde Cesium ion
+        const tilesetAssetId = 6134163; // Reemplaza con el ID de tu modelo 3D en Cesium ion
+        const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
+        viewer.scene.primitives.add(tileset);
+
+        // 4. Enfocar la cámara automáticamente en el modelo cargado
+        await viewer.flyTo(tileset, {
+            duration: 2.0,
+            offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 500)
+        });
+
+        console.log('Visor WGS84 inicializado correctamente con recursos de Cesium ion.');
+    } catch (error) {
+        console.error('Error al inicializar los recursos de Cesium ion:', error);
+    }
+}
+
+initViewer();
