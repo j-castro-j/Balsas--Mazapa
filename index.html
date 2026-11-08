@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cañada Balsas - Visor Minero Base</title>
+    <title>Cañada Balsas - Visor Ejecutivo Minero</title>
     
     <!-- Estilos de CesiumJS -->
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <!-- Chart.js para el Perfil Topográfico -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
         html, body {
@@ -20,10 +22,59 @@
             touch-action: none;
         }
 
-        #cesiumContainer {
+        #app-layout {
+            display: flex;
+            flex-direction: column;
             width: 100vw;
             height: 100vh;
+        }
+
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
             position: relative;
+            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #profile-container {
+            width: 100%;
+            height: 0%;
+            background: rgba(20, 30, 45, 0.97);
+            border-top: 0px solid #B6812F;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            padding: 0 15px;
+            position: relative;
+            overflow: hidden;
+            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s ease, border-top 0.35s ease;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.6);
+        }
+
+        #app-layout.split-active #cesiumContainer {
+            height: 60%;
+        }
+        #app-layout.split-active #profile-container {
+            height: 40%;
+            padding: 10px 15px;
+            border-top: 2px solid #B6812F;
+        }
+
+        #profile-header {
+            color: #f3d07e;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        #profile-canvas-wrapper {
+            flex-grow: 1;
+            position: relative;
+            width: 100%;
+            height: calc(100% - 22px);
         }
 
         #app-title {
@@ -76,7 +127,7 @@
             border-radius: 8px;
             border: 1px solid #B6812F;
             box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-            width: 185px;
+            width: 195px;
         }
 
         .cesium-button {
@@ -154,7 +205,7 @@
 
         @media (max-width: 768px) {
             #app-title { font-size: 11px; padding: 6px 10px; }
-            #vertical-toolbox { width: 155px; padding: 6px; }
+            #vertical-toolbox { width: 160px; padding: 6px; }
             .cesium-button { padding: 8px; font-size: 11px; }
             #compass-container { width: 90px; height: 90px; top: 10px; right: 10px; }
             #compass-rose { width: 75px; height: 75px; }
@@ -164,48 +215,62 @@
 </head>
 <body>
 
-    <div id="cesiumContainer">
-        <div id="app-title">Cañada Balsas - Mazapa / Noviembre 2026</div>
-        <div id="loading-indicator">🔄 Cargando teselas y ortofoto...</div>
+    <div id="app-layout">
+        <!-- VISTA SUPERIOR -->
+        <div id="cesiumContainer">
+            <div id="app-title">Cañada Balsas - Mazapa / Noviembre 2026</div>
+            <div id="loading-indicator">🔄 Cargando recursos...</div>
 
-        <div id="vertical-toolbox">
-            <button id="toggle2D3D" class="cesium-button">🌐 Cambiar a Vista 2D</button>
-            <button id="btnRecenter" class="cesium-button" style="border-left: 4px solid #f3d07e;">🎯 Recentrar</button>
-            <button id="btnMeasureDist" class="cesium-button">📏 Medir Distancia</button>
-            <button id="btnMeasureArea" class="cesium-button">📐 Medir Área</button>
-            <button id="btnClearMeasure" class="cesium-button" style="background: #5a2222; border-color: #aa4444;">🧹 Limpiar Todo</button>
-        </div>
+            <div id="vertical-toolbox">
+                <button id="toggle2D3D" class="cesium-button">🌐 Cambiar a Vista 2D</button>
+                <button id="btnRecenter" class="cesium-button" style="border-left: 4px solid #f3d07e;">🎯 Recentrar</button>
+                <button id="btnMeasureDist" class="cesium-button">📏 Medir Distancia</button>
+                <button id="btnMeasureArea" class="cesium-button">📐 Medir Área</button>
+                <button id="btnSection" class="cesium-button" style="border-left: 4px solid #f3d07e;">📈 Generar Sección</button>
+                <button id="btnClearMeasure" class="cesium-button" style="background: #5a2222; border-color: #aa4444;">🧹 Limpiar Todo</button>
+            </div>
 
-        <div id="compass-container">
-            <div id="compass-rose">
-                <svg width="100%" height="100%" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="46" fill="#24415D" stroke="#B6812F" stroke-width="1.5"/>
-                    <text x="50" y="15" fill="#f3d07e" font-size="11" font-weight="bold" text-anchor="middle">N</text>
-                    <text x="50" y="94" fill="#ffffff" font-size="9" text-anchor="middle">S</text>
-                    <text x="90" y="53.5" fill="#ffffff" font-size="9" text-anchor="middle">E</text>
-                    <text x="10" y="53.5" fill="#ffffff" font-size="9" text-anchor="middle">W</text>
-                    <polygon points="50,22 53,50 50,44" fill="#e74c3c"/>
-                    <polygon points="50,22 47,50 50,44" fill="#c0392b"/>
-                    <polygon points="50,78 53,50 50,56" fill="#bdc3c7"/>
-                    <polygon points="50,78 47,50 50,56" fill="#95a5a6"/>
-                    <circle cx="50" cy="50" r="4" fill="#B6812F" stroke="#ffffff" stroke-width="1"/>
-                </svg>
+            <div id="compass-container">
+                <div id="compass-rose">
+                    <svg width="100%" height="100%" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="46" fill="#24415D" stroke="#B6812F" stroke-width="1.5"/>
+                        <text x="50" y="15" fill="#f3d07e" font-size="11" font-weight="bold" text-anchor="middle">N</text>
+                        <text x="50" y="94" fill="#ffffff" font-size="9" text-anchor="middle">S</text>
+                        <text x="90" y="53.5" fill="#ffffff" font-size="9" text-anchor="middle">E</text>
+                        <text x="10" y="53.5" fill="#ffffff" font-size="9" text-anchor="middle">W</text>
+                        <polygon points="50,22 53,50 50,44" fill="#e74c3c"/>
+                        <polygon points="50,22 47,50 50,44" fill="#c0392b"/>
+                        <polygon points="50,78 53,50 50,56" fill="#bdc3c7"/>
+                        <polygon points="50,78 47,50 50,56" fill="#95a5a6"/>
+                        <circle cx="50" cy="50" r="4" fill="#B6812F" stroke="#ffffff" stroke-width="1"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div id="coords-hud">
+                Lat: 0.000000° | Lon: 0.000000° | Alt: 0.00 m<br>
+                <span style="font-size: 9px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>
             </div>
         </div>
 
-        <div id="coords-hud">
-            Lat: 0.000000° | Lon: 0.000000° | Alt: 0.00 m<br>
-            <span style="font-size: 9px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>
+        <!-- VISTA INFERIOR -->
+        <div id="profile-container">
+            <div id="profile-header">
+                <span>📈 PERFIL TOPOGRÁFICO TRANSVERSAL (DEM)</span>
+                <span id="profile-info" style="color: #fff; font-family: monospace; font-size: 11px;">Seleccione punto inicial y final en el tajo...</span>
+            </div>
+            <div id="profile-canvas-wrapper">
+                <canvas id="sectionChart"></canvas>
+            </div>
         </div>
     </div>
 
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"></script>
 
     <script>
-        // Configura tu token de Cesium ion
         Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImFveUJVMGZrSnJLaDY4YnAiLCJqdGkiOiI3YTAzYzNiNi04M2Y0LTQzNTYtYTUwZS0xZjFlYjRiYTFiMDEiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBCYWxzYXMgV0dTODQiLCJpYXQiOjE3OTQxNDg3OTR9.LmMadfxwRLLqVzBvfdqgrtytkdqtiiIawye9J63QEwI'; 
 
-        let viewer, tileset, orthoLayer, esriLayer;
+        let viewer, profileChart, tileset, orthoLayer, esriLayer;
         let activeMode = 'NONE';
         let activePoints = [];
         let activeEntities = [];
@@ -241,8 +306,13 @@
             try {
                 const tilesetAssetId = 6134163;         
                 const orthoAssetId = 6134167;           
+                const terrainAssetId = 6134324;  // <--- ID DE TU DEM EN CESIUM ION
 
-                // 1. Capa Esri World Imagery (Fondo base global)
+                // 1. Cargar el Terreno DEM oficial (Activo para 3D y secciones transversales)
+                const terrainProvider = await Cesium.CesiumTerrainProvider.fromIonAssetId(terrainAssetId);
+                viewer.terrainProvider = terrainProvider;
+
+                // 2. Capa Esri World Imagery (Fondo base global en 2D)
                 const esriImageryProvider = new Cesium.UrlTemplateImageryProvider({
                     url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                     maximumLevel: 19,
@@ -251,15 +321,17 @@
                 esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
                 esriLayer.show = false;
 
-                // 2. Ortofoto Local del Dron
-                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
+                // 3. Ortofoto Local del Dron (Limitada al nivel máximo real 15 para evitar errores 404)[cite: 4]
+                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId, {
+                    maximumLevel: 15 
+                });
                 orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
                 orthoLayer.show = false; 
                 orthoLayer.maximumAnisotropy = viewer.maximumAnisotropy;
                 orthoLayer.minificationFilter = Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR;
                 orthoLayer.magnificationFilter = Cesium.TextureMagnificationFilter.LINEAR;
 
-                // 3. Cargar Modelo 3D (3D Tileset)
+                // 4. Cargar Modelo 3D (3D Tileset)
                 tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
                 tileset.maximumScreenSpaceError = 3; 
                 tileset.skipLevelOfDetail = false;   
@@ -282,6 +354,8 @@
                     duration: 2.0,
                     offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
                 });
+
+                initChart();
 
                 const compassRose = document.getElementById('compass-rose');
                 viewer.scene.preRender.addEventListener(() => {
@@ -308,7 +382,9 @@
 
                 document.getElementById('btnRecenter').addEventListener('click', async () => {
                     if (is2D) {
-                        await viewer.flyTo(orthoLayer, { duration: 1.2 });
+                        if (orthoLayer.rectangle) {
+                            await viewer.camera.flyTo({ destination: orthoLayer.rectangle, duration: 1.2 });
+                        }
                     } else {
                         await viewer.flyTo(tileset, {
                             duration: 1.2,
@@ -320,7 +396,9 @@
 
                 const btnDist = document.getElementById('btnMeasureDist');
                 const btnArea = document.getElementById('btnMeasureArea');
+                const btnSection = document.getElementById('btnSection');
                 const btnClear = document.getElementById('btnClearMeasure');
+                const appLayout = document.getElementById('app-layout');
 
                 btnDist.addEventListener('click', () => {
                     if (is2D) return;
@@ -340,6 +418,19 @@
                     viewer.scene.requestRender();
                 });
 
+                btnSection.addEventListener('click', () => {
+                    if (is2D) return;
+                    resetAllTools();
+                    activeMode = 'SECTION';
+                    btnSection.classList.add('active');
+                    
+                    appLayout.classList.add('split-active');
+                    setTimeout(() => viewer.resize(), 350);
+
+                    document.getElementById('profile-info').textContent = 'Seleccione inicio y fin de la sección en el tajo...';
+                    viewer.scene.requestRender();
+                });
+
                 btnClear.addEventListener('click', () => {
                     resetAllTools();
                     viewer.scene.requestRender();
@@ -353,6 +444,14 @@
                     activeEntities = [];
                     btnDist.classList.remove('active');
                     btnArea.classList.remove('active');
+                    btnSection.classList.remove('active');
+                    
+                    appLayout.classList.remove('split-active');
+                    setTimeout(() => viewer.resize(), 350);
+
+                    profileChart.data.labels = [];
+                    profileChart.data.datasets[0].data = [];
+                    profileChart.update();
                     coordsHud.innerHTML = `Herramientas limpiadas.<br><span style="font-size: 9px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
                     viewer.scene.requestRender();
                 }
@@ -435,13 +534,105 @@
                             coordsHud.innerHTML = `Modo Área: Faltan ${3 - activePoints.length} puntos para calcular...`;
                         }
                     }
+
+                    if (activeMode === 'SECTION' && activePoints.length === 2) {
+                        activeMode = 'NONE';
+                        btnSection.classList.remove('active');
+
+                        const lineEntity = viewer.entities.add({
+                            polyline: {
+                                positions: [...activePoints],
+                                width: 4,
+                                material: Cesium.Color.fromCssColorString('#e74c3c')
+                            }
+                        });
+                        activeEntities.push(lineEntity);
+
+                        await generateDemProfile(activePoints[0], activePoints[1]);
+                    }
                     viewer.scene.requestRender();
                 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-                // --- CONTROL SWITCH 2D / 3D BASE ---
+                async function generateDemProfile(p1, p2) {
+                    document.getElementById('profile-info').textContent = 'Calculando perfil de elevación sobre el DEM...';
+                    viewer.scene.requestRender();
+                    const numSamples = 80;
+                    const positions = [];
+                    const totalDist = Cesium.Cartesian3.distance(p1, p2);
+
+                    for (let i = 0; i <= numSamples; i++) {
+                        const t = i / numSamples;
+                        const interpolated = new Cesium.Cartesian3();
+                        Cesium.Cartesian3.lerp(p1, p2, t, interpolated);
+                        positions.push(Cesium.Cartographic.fromCartesian(interpolated));
+                    }
+
+                    try {
+                        const updatedPositions = await Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, positions);
+                        const distances = [];
+                        const elevations = [];
+
+                        for (let i = 0; i < updatedPositions.length; i++) {
+                            const distAlong = ((i / numSamples) * totalDist).toFixed(1);
+                            const alt = updatedPositions[i].height.toFixed(2);
+                            distances.push(distAlong);
+                            elevations.push(parseFloat(alt));
+                        }
+
+                        profileChart.data.labels = distances;
+                        profileChart.data.datasets[0].data = elevations;
+                        profileChart.update();
+
+                        document.getElementById('profile-info').textContent = `Sección generada con éxito | Longitud: ${totalDist.toFixed(2)} m`;
+                        viewer.scene.requestRender();
+                    } catch (error) {
+                        console.error('Error al muestrear el DEM:', error);
+                        document.getElementById('profile-info').textContent = 'Error al calcular el perfil sobre el terreno.';
+                    }
+                }
+
+                function initChart() {
+                    const ctx = document.getElementById('sectionChart').getContext('2d');
+                    profileChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [{
+                                label: 'Cota Z (m)',
+                                data: [],
+                                borderColor: '#B6812F',
+                                backgroundColor: 'rgba(182, 129, 47, 0.25)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.1,
+                                pointRadius: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    title: { display: true, text: 'Distancia Horizontal (m)', color: '#f3d07e', font: { size: 10 } },
+                                    ticks: { color: '#ccc', font: { size: 9 } },
+                                    grid: { color: 'rgba(255,255,255,0.08)' }
+                                },
+                                y: {
+                                    title: { display: true, text: 'Elevación Ortométrica - INEGI 1997 (m)', color: '#f3d07e', font: { size: 10 } },
+                                    ticks: { color: '#ccc', font: { size: 9 } },
+                                    grid: { color: 'rgba(255,255,255,0.08)' }
+                                }
+                            },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                }
+
+                // --- CONTROL SWITCH 2D / 3D SEGURO Y CORREGIDO ---
                 const toggleButton = document.getElementById('toggle2D3D');
                 toggleButton.addEventListener('click', async () => {
                     if (!is2D) {
+                        // --- CAMBIAR A VISTA 2D ---
                         viewer.scene.morphTo2D(1.5);
                         viewer.scene.globe.show = true;
                         
@@ -455,15 +646,19 @@
                         resetAllTools();
                         btnDist.disabled = true;
                         btnArea.disabled = true;
+                        btnSection.disabled = true;
 
                         setTimeout(async () => {
-                            await viewer.flyTo(orthoLayer, {
-                                duration: 1.2,
-                                offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-90), 800)
-                            });
+                            if (orthoLayer.rectangle) {
+                                await viewer.camera.flyTo({
+                                    destination: orthoLayer.rectangle,
+                                    duration: 1.2
+                                });
+                            }
                             viewer.scene.requestRender();
                         }, 1600);
                     } else {
+                        // --- CAMBIAR A VISTA 3D ---
                         viewer.scene.morphTo3D(1.5);
                         viewer.scene.globe.show = true;
                         viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
@@ -478,6 +673,7 @@
 
                         btnDist.disabled = false;
                         btnArea.disabled = false;
+                        btnSection.disabled = false;
 
                         await viewer.flyTo(tileset, {
                             duration: 1.5,
