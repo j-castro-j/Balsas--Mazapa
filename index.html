@@ -242,47 +242,32 @@
                 const tilesetAssetId = 6134163;         
                 const orthoAssetId = 6134167;           
 
-                // 1. Cargar Modelo 3D (3D Tileset) primero para obtener su referencia espacial exacta
-                tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
-                tileset.maximumScreenSpaceError = 3; 
-                tileset.skipLevelOfDetail = false;   
-                tileset.immediatelyLoadDesiredLevelOfDetail = true; 
-                viewer.scene.primitives.add(tileset);
-
-                // 2. Capa Esri World Imagery (Fondo base global en 2D)
+                // 1. Capa Esri World Imagery (Fondo base global en 2D)
                 const esriImageryProvider = new Cesium.UrlTemplateImageryProvider({
                     url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                     maximumLevel: 19,
                     credit: 'Esri World Imagery'
                 });
                 esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
-                esriLayer.show = false; 
+                esriLayer.show = false; // Oculto por defecto en 3D
 
-                // 3. Ortofoto Local del Dron con control de errores en los bordes
-                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
-                
-                orthoProvider.errorEvent.addEventListener((err) => {
-                    err.retry = false; // Evita reintentos en teselas vacías fuera de la máscara de vuelo
+                // 2. Ortofoto Local del Dron (Con límite de nivel 14 para evitar errores 404 en los bordes)
+                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId, {
+                    maximumLevel: 14
                 });
-
                 orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
-                orthoLayer.show = false; 
+                orthoLayer.show = false; // Oculto por defecto en 3D
                 orthoLayer.maximumAnisotropy = viewer.maximumAnisotropy;
                 orthoLayer.minificationFilter = Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR;
                 orthoLayer.magnificationFilter = Cesium.TextureMagnificationFilter.LINEAR;
 
-                // Restricción del rectángulo de cobertura para detener peticiones fuera de rango
-                if (tileset.boundingSphere) {
-                    const center = tileset.boundingSphere.center;
-                    const cartographic = Cesium.Cartographic.fromCartesian(center);
-                    const margin = 0.04; 
-                    orthoLayer.rectangle = Cesium.Rectangle.fromDegrees(
-                        Cesium.Math.toDegrees(cartographic.longitude) - margin,
-                        Cesium.Math.toDegrees(cartographic.latitude) - margin,
-                        Cesium.Math.toDegrees(cartographic.longitude) + margin,
-                        Cesium.Math.toDegrees(cartographic.latitude) + margin
-                    );
-                }
+                // 3. Cargar Modelo 3D (3D Tileset) - Activo en 3D
+                tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
+                tileset.maximumScreenSpaceError = 3; 
+                tileset.skipLevelOfDetail = false;   
+                tileset.immediatelyLoadDesiredLevelOfDetail = true; 
+
+                viewer.scene.primitives.add(tileset);
 
                 const loadingIndicator = document.getElementById('loading-indicator');
                 tileset.loadProgress.addEventListener((numberOfTilesLoading) => {
