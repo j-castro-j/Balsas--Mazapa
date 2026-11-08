@@ -251,10 +251,14 @@
                 esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
                 esriLayer.show = false; // Oculto por defecto en 3D
 
-                // 2. Ortofoto Local del Dron (Límite máximo seguro en 14 para evitar errores 404 y cuadros negros)
-                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId, {
-                    maximumLevel: 14
+                // 2. Ortofoto Local del Dron a máxima resolución
+                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
+                
+                // Silenciador de errores 404 en los bordes vacíos del raster para evitar parches negros
+                orthoProvider.errorEvent.addEventListener((err) => {
+                    err.retry = false; // Evita reintentos innecesarios en teselas inexistentes fuera del vuelo
                 });
+
                 orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
                 orthoLayer.show = false; // Oculto por defecto en 3D
                 orthoLayer.maximumAnisotropy = viewer.maximumAnisotropy;
