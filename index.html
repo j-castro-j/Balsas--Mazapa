@@ -321,10 +321,15 @@
                 esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
                 esriLayer.show = false;
 
-                // 3. Ortofoto Local del Dron (CONFIGURADA A MÁXIMO NIVEL 14 para compensar alta densidad de pantalla y evitar errores 404)
-                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId, {
-                    maximumLevel: 14 
+                // 3. Ortofoto Local del Dron (FORZANDO EL LÍMITE MÁXIMO EN LA INSTANCIA PARA EVITAR 404 Y BLOQUES NEGROS)
+                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
+                orthoProvider.maximumLevel = 14; // <--- Forzamos el límite aquí para ignorar los niveles 15/16 exigidos por el DEM
+                
+                // Interceptar errores de teselas para evitar que se pinten cuadros negros
+                orthoProvider.errorEvent.addEventListener((err) => {
+                    err.retry = false;
                 });
+
                 orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
                 orthoLayer.show = false; 
                 orthoLayer.maximumAnisotropy = viewer.maximumAnisotropy;
