@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cañada Balsas - Visor con Secciones Dinámicas</title>
+    <title>Cañada Balsas - Visor Ejecutivo Minero</title>
     
     <!-- Estilos de CesiumJS -->
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
@@ -271,11 +271,11 @@
         // Configura tu token de Cesium ion
         Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImFveUJVMGZrSnJLaDY4YnAiLCJqdGkiOiI3YTAzYzNiNi04M2Y0LTQzNTYtYTUwZS0xZjFlYjRiYTFiMDEiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBCYWxzYXMgV0dTODQiLCJpYXQiOjE3OTQxNDg3OTR9.LmMadfxwRLLqVzBvfdqgrtytkdqtiiIawye9J63QEwI'; 
 
-        let viewer, profileChart;
+        let viewer, profileChart, tileset;
         let activeMode = 'NONE';
         let activePoints = [];
         let activeEntities = [];
-        let activePolygonEntity = null; // Referencia optimizada para el área
+        let activePolygonEntity = null;
         let is2D = false;
 
         async function initViewer() {
@@ -290,9 +290,13 @@
                 navigationHelpButton: false,
                 selectionIndicator: false,
                 infoBox: false,
-                scene3DOnly: false 
+                scene3DOnly: false,
+                requestRenderMode: true, // GPU OPTIMIZATION: Renderiza solo cuando hay cambios/movimiento
+                maximumFPS: 30           // Limita los FPS para aliviar la tarjeta de video
             });
 
+            // Configuración inicial de fondo para 3D
+            viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
             viewer.scene.globe.show = true; 
             viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
             viewer.scene.skyAtmosphere.show = false;
@@ -324,12 +328,12 @@
                     maximumLevel: 19 
                 });
                 const orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
-                orthoLayer.maximumAnisotropy = viewer.maximumAnisotropy;
+                orthoLayer.maximumAnisotropy = orthoLayer.maximumAnisotropy;
                 orthoLayer.minificationFilter = Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR;
                 orthoLayer.magnificationFilter = Cesium.TextureMagnificationFilter.LINEAR;
 
                 // 4. Cargar Modelo 3D (3D Tileset)
-                const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
+                tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
                 tileset.maximumScreenSpaceError = 3; 
                 tileset.skipLevelOfDetail = false;   
                 tileset.immediatelyLoadDesiredLevelOfDetail = true; 
@@ -344,6 +348,7 @@
                     } else {
                         loadingIndicator.style.display = 'none';
                     }
+                    viewer.scene.requestRender(); // Forzar renderizado en modo optimizado
                 });
 
                 await viewer.flyTo(tileset, {
@@ -381,6 +386,7 @@
                         duration: 1.2,
                         offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(is2D ? -90 : -45), is2D ? 300 : 200)
                     });
+                    viewer.scene.requestRender();
                 });
 
                 const btnDist = document.getElementById('btnMeasureDist');
@@ -395,6 +401,7 @@
                     activeMode = 'DISTANCE';
                     btnDist.classList.add('active');
                     coordsHud.innerHTML = `Modo: Distancia (Clic puntos, 2.º clic mide)`;
+                    viewer.scene.requestRender();
                 });
 
                 btnArea.addEventListener('click', () => {
@@ -403,6 +410,7 @@
                     activeMode = 'AREA';
                     btnArea.classList.add('active');
                     coordsHud.innerHTML = `Modo: Área (Agregue vértices en el tajo...)`;
+                    viewer.scene.requestRender();
                 });
 
                 btnSection.addEventListener('click', () => {
@@ -415,10 +423,12 @@
                     setTimeout(() => viewer.resize(), 350);
 
                     document.getElementById('profile-info').textContent = 'Seleccione inicio y fin de la sección en el tajo...';
+                    viewer.scene.requestRender();
                 });
 
                 btnClear.addEventListener('click', () => {
                     resetAllTools();
+                    viewer.scene.requestRender();
                 });
 
                 function resetAllTools() {
@@ -438,9 +448,9 @@
                     profileChart.data.datasets[0].data = [];
                     profileChart.update();
                     coordsHud.innerHTML = `Herramientas limpiadas.<br><span style="font-size: 9px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
+                    viewer.scene.requestRender();
                 }
 
-                // --- FUNCIÓN MATEMÁTICA PARA CÁLCULO DE ÁREA EN METROS CUADRADOS ---
                 function calculatePolygonArea(cartesianPoints) {
                     if (cartesianPoints.length < 3) return 0;
                     const refCartographic = Cesium.Cartographic.fromCartesian(cartesianPoints[0]);
@@ -499,7 +509,6 @@
                     if (activeMode === 'AREA') {
                         if (activePoints.length >= 3) {
                             if (!activePolygonEntity) {
-                                // Crear el polígono una sola vez para evitar lag
                                 activePolygonEntity = viewer.entities.add({
                                     polygon: {
                                         hierarchy: new Cesium.PolygonHierarchy([...activePoints]),
@@ -510,11 +519,9 @@
                                 });
                                 activeEntities.push(activePolygonEntity);
                             } else {
-                                // Actualizar la jerarquía fluidamente sin destruir la entidad
                                 activePolygonEntity.polygon.hierarchy = new Cesium.PolygonHierarchy([...activePoints]);
                             }
 
-                            // Calcular y mostrar área en tiempo real
                             const areaM2 = calculatePolygonArea(activePoints);
                             const areaHectareas = areaM2 / 10000;
                             coordsHud.innerHTML = `Área: ${areaM2.toLocaleString('en-US', {maximumFractionDigits: 2})} m² (${areaHectareas.toFixed(4)} ha) | Vértices: ${activePoints.length}`;
@@ -538,10 +545,12 @@
 
                         await generateDemProfile(activePoints[0], activePoints[1]);
                     }
+                    viewer.scene.requestRender();
                 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
                 async function generateDemProfile(p1, p2) {
                     document.getElementById('profile-info').textContent = 'Calculando perfil de elevación sobre el DEM...';
+                    viewer.scene.requestRender();
                     const numSamples = 80;
                     const positions = [];
                     const totalDist = Cesium.Cartesian3.distance(p1, p2);
@@ -570,6 +579,7 @@
                         profileChart.update();
 
                         document.getElementById('profile-info').textContent = `Sección generada con éxito | Longitud: ${totalDist.toFixed(2)} m`;
+                        viewer.scene.requestRender();
                     } catch (error) {
                         console.error('Error al muestrear el DEM:', error);
                         document.getElementById('profile-info').textContent = 'Error al calcular el perfil sobre el terreno.';
@@ -613,12 +623,20 @@
                     });
                 }
 
+                // --- CONTROL SWITCH 2D / 3D (CORRECCIÓN DE FONDO EN 2D Y LIBERACIÓN DE GPU) ---
                 const toggleButton = document.getElementById('toggle2D3D');
                 toggleButton.addEventListener('click', async () => {
                     if (!is2D) {
                         viewer.scene.morphTo2D(1.5);
                         viewer.scene.globe.show = true;
                         esriLayer.show = true;
+                        
+                        // Fondo transparente/blanco nativo en 2D para que Esri luzca sin recuadro negro
+                        viewer.scene.backgroundColor = Cesium.Color.WHITE;
+                        
+                        // Ocultar modelo 3D para liberar GPU por completo en 2D
+                        if (tileset) tileset.show = false;
+
                         toggleButton.textContent = '🌐 Cambiar a Vista 3D';
                         is2D = true;
 
@@ -632,12 +650,20 @@
                                 duration: 1.0,
                                 offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-90), 300)
                             });
+                            viewer.scene.requestRender();
                         }, 1600);
                     } else {
                         viewer.scene.morphTo3D(1.5);
                         viewer.scene.globe.show = true;
+                        
+                        // Restaurar fondo oscuro corporativo solo en 3D para ocultar bordes DEM
+                        viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
                         viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
                         esriLayer.show = false;
+                        
+                        // Volver a mostrar el modelo 3D del tajo
+                        if (tileset) tileset.show = true;
+
                         toggleButton.textContent = '🌐 Cambiar a Vista 2D';
                         is2D = false;
 
@@ -649,6 +675,7 @@
                             duration: 1.5,
                             offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
                         });
+                        viewer.scene.requestRender();
                     }
                 });
 
