@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cañada Balsas - Mazapa / Noviembre 2026</title>
+    <title>Cañada Balsas - Visor Ejecutivo Minero</title>
     
-    <!-- Estilos oficiales de CesiumJS -->
+    <!-- Estilos de CesiumJS -->
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
     
     <style>
-        html, body, #cesiumContainer {
+        html, body {
             width: 100%;
             height: 100%;
             margin: 0;
@@ -20,7 +20,12 @@
             touch-action: none;
         }
 
-        /* Título Superior Izquierdo */
+        #cesiumContainer {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
         #app-title {
             position: absolute;
             top: 15px;
@@ -33,15 +38,12 @@
             font-size: 14px;
             font-weight: 700;
             letter-spacing: 0.8px;
-            border-left: 5px solid #3498db;
-            border-top: 1px solid rgba(52, 152, 219, 0.4);
-            border-right: 1px solid rgba(52, 152, 219, 0.4);
-            border-bottom: 1px solid rgba(52, 152, 219, 0.4);
+            border-left: 5px solid #B6812F;
+            border: 1px solid rgba(182, 129, 47, 0.4);
             box-shadow: 0 4px 15px rgba(0,0,0,0.6);
             pointer-events: none;
         }
 
-        /* Barra Vertical de Herramientas Centrada a la Izquierda */
         #vertical-toolbox {
             position: absolute;
             top: 50%;
@@ -50,42 +52,40 @@
             z-index: 10;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
             background: rgba(36, 65, 93, 0.9);
             padding: 10px;
             border-radius: 8px;
-            border: 1px solid #3498db;
+            border: 1px solid #B6812F;
             box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-            width: 200px;
+            width: 185px;
         }
 
         .cesium-button {
             background: #24415D;
-            border: 1px solid #3498db;
+            border: 1px solid #B6812F;
             color: #ffffff;
-            padding: 12px 14px;
+            padding: 10px 12px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 12px;
             text-align: left;
-            transition: background 0.2s, border-color 0.2s;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            transition: background 0.2s;
             -webkit-tap-highlight-color: transparent;
         }
 
         .cesium-button:hover:not(:disabled), .cesium-button:active:not(:disabled) {
             background: #31567a;
-            border-color: #5dade2;
+            border-color: #f3d07e;
         }
 
         .cesium-button.active {
-            background: #2980b9;
-            border-color: #ffffff;
+            background: #B6812F;
             color: #ffffff;
+            border-color: #ffffff;
         }
 
-        /* Estilo para botones deshabilitados en modo 2D */
         .cesium-button:disabled {
             background: #172a3a;
             border-color: #4a5c6e;
@@ -94,16 +94,15 @@
             opacity: 0.6;
         }
 
-        /* Brújula Ejecutiva con Etiquetas Cardinales (130px) */
         #compass-container {
             position: absolute;
             top: 15px;
             right: 15px;
             z-index: 10;
-            width: 130px;
-            height: 130px;
+            width: 120px;
+            height: 120px;
             background: rgba(36, 65, 93, 0.9);
-            border: 2px solid #3498db;
+            border: 2px solid #B6812F;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -113,91 +112,89 @@
         }
 
         #compass-rose {
-            width: 110px;
-            height: 110px;
+            width: 100px;
+            height: 100px;
             transition: transform 0.05s linear;
         }
 
-        /* HUD de Coordenadas con Aclaración Geodésica */
         #coords-hud {
             position: absolute;
             bottom: 15px;
             left: 15px;
             z-index: 10;
             background: rgba(36, 65, 93, 0.92);
-            color: #5dade2;
+            color: #f3d07e;
             font-family: monospace;
             font-size: 11px;
             padding: 8px 12px;
             border-radius: 6px;
-            border: 1px solid #3498db;
+            border: 1px solid #B6812F;
             box-shadow: 0 2px 10px rgba(0,0,0,0.4);
             pointer-events: none;
-            max-width: 90vw;
-            box-sizing: border-box;
             line-height: 1.4;
         }
 
-        /* Ajustes responsivos para dispositivos móviles */
         @media (max-width: 768px) {
-            #app-title { font-size: 12px; padding: 8px 12px; }
-            #vertical-toolbox { width: 170px; padding: 8px; }
-            .cesium-button { padding: 10px; font-size: 12px; }
-            #compass-container { width: 100px; height: 100px; top: 10px; right: 10px; }
-            #compass-rose { width: 85px; height: 85px; }
+            #app-title { font-size: 11px; padding: 6px 10px; }
+            #vertical-toolbox { width: 155px; padding: 6px; }
+            .cesium-button { padding: 8px; font-size: 11px; }
+            #compass-container { width: 90px; height: 90px; top: 10px; right: 10px; }
+            #compass-rose { width: 75px; height: 75px; }
             #coords-hud { font-size: 10px; bottom: 10px; left: 10px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Título Principal -->
-    <div id="app-title">Cañada Balsas - Mazapa / Noviembre 2026</div>
+    <div id="cesiumContainer">
+        <div id="app-title">Cañada Balsas - Mazapa / Noviembre 2026</div>
 
-    <!-- Contenedor del Visor -->
-    <div id="cesiumContainer"></div>
-
-    <!-- Barra Vertical de Herramientas -->
-    <div id="vertical-toolbox">
-        <button id="toggle2D3D" class="cesium-button">🌐 Cambiar a Vista 2D</button>
-        <button id="btnRecenter" class="cesium-button" style="border-left: 4px solid #5dade2;">🎯 Recentrar Vista</button>
-        <button id="btnMeasureDist" class="cesium-button">📏 Medir Distancia</button>
-        <button id="btnMeasureArea" class="cesium-button">📐 Medir Área</button>
-        <button id="btnClearMeasure" class="cesium-button" style="background: #5a2222; border-color: #aa4444;">🧹 Limpiar</button>
-    </div>
-
-    <!-- Brújula Ejecutiva con Etiquetas (N, S, E, W) -->
-    <div id="compass-container">
-        <div id="compass-rose">
-            <svg width="100%" height="100%" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="46" fill="#24415D" stroke="#3498db" stroke-width="1.5"/>
-                <text x="50" y="15" fill="#5dade2" font-size="11" font-weight="bold" text-anchor="middle">N</text>
-                <text x="50" y="94" fill="#ffffff" font-size="9" text-anchor="middle">S</text>
-                <text x="90" y="53.5" fill="#ffffff" font-size="9" text-anchor="middle">E</text>
-                <text x="10" y="53.5" fill="#ffffff" font-size="9" text-anchor="middle">W</text>
-                <polygon points="50,22 53,50 50,44" fill="#e74c3c"/>
-                <polygon points="50,22 47,50 50,44" fill="#c0392b"/>
-                <polygon points="50,78 53,50 50,56" fill="#bdc3c7"/>
-                <polygon points="50,78 47,50 50,56" fill="#95a5a6"/>
-                <circle cx="50" cy="50" r="4" fill="#3498db" stroke="#ffffff" stroke-width="1"/>
-            </svg>
+        <div id="vertical-toolbox">
+            <button id="toggle2D3D" class="cesium-button">🌐 Cambiar a Vista 2D</button>
+            <button id="btnRecenter" class="cesium-button" style="border-left: 4px solid #f3d07e;">🎯 Recentrar</button>
+            <button id="btnMeasureDist" class="cesium-button">📏 Medir Distancia</button>
+            <button id="btnMeasureArea" class="cesium-button">📐 Medir Área</button>
+            <button id="btnClearMeasure" class="cesium-button" style="background: #5a2222; border-color: #aa4444;">🧹 Limpiar Todo</button>
         </div>
-    </div>
 
-    <!-- HUD de Coordenadas con Nota de Referencia -->
-    <div id="coords-hud">
-        Lat: 0.000000° | Lon: 0.000000° | Alt: 0.00 m<br>
-        <span style="font-size: 9.5px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>
+        <div id="compass-container">
+            <div id="compass-rose">
+                <svg width="100%" height="100%" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="46" fill="#24415D" stroke="#B6812F" stroke-width="1.5"/>
+                    <text x="50" y="15" fill="#f3d07e" font-size="11" font-weight="bold" text-anchor="middle">N</text>
+                    <text x="50" y="94" fill="#ffffff" font-size="9" text-anchor="middle">S</text>
+                    <text x="90" y="53.5" fill="#ffffff" font-size="9" text-anchor="middle">E</text>
+                    <text x="10" y="53.5" fill="#ffffff" font-size="9" text-anchor="middle">W</text>
+                    <polygon points="50,22 53,50 50,44" fill="#e74c3c"/>
+                    <polygon points="50,22 47,50 50,44" fill="#c0392b"/>
+                    <polygon points="50,78 53,50 50,56" fill="#bdc3c7"/>
+                    <polygon points="50,78 47,50 50,56" fill="#95a5a6"/>
+                    <circle cx="50" cy="50" r="4" fill="#B6812F" stroke="#ffffff" stroke-width="1"/>
+                </svg>
+            </div>
+        </div>
+
+        <div id="coords-hud">
+            Lat: 0.000000° | Lon: 0.000000° | Alt: 0.00 m<br>
+            <span style="font-size: 9px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>
+        </div>
     </div>
 
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"></script>
 
     <script>
         // Configura tu token de Cesium ion
-        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImFveUJVMGZrSnJLaDY4YnAiLCJqdGkiOiI3YTAzYzNiNi04M2Y0LTQzNTYtYTUwZS0xZjFlYjRiYTFiMDEiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBCYWxzYXMgV0dTODQiLCJpYXQiOjE3OTQxNDg3OTR9.LmMadfxwRLLqVzBvfdqgrtytkdqtiiIawye9J63QEwI'; // Reemplaza con tu token válido
+        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImFveUJVMGZrSnJLaDY4YnAiLCJqdGkiOiI3YTAzYzNiNi04M2Y0LTQzNTYtYTUwZS0xZjFlYjRiYTFiMDEiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBCYWxzYXMgV0dTODQiLCJpYXQiOjE3OTQxNDg3OTR9.LmMadfxwRLLqVzBvfdqgrtytkdqtiiIawye9J63QEwI'; 
+
+        let viewer, tileset, orthoLayer, esriLayer;
+        let activeMode = 'NONE';
+        let activePoints = [];
+        let activeEntities = [];
+        let activePolygonEntity = null;
+        let is2D = false;
 
         async function initViewer() {
-            const viewer = new Cesium.Viewer('cesiumContainer', {
+            viewer = new Cesium.Viewer('cesiumContainer', {
                 imageryProvider: false,
                 baseLayerPicker: false,
                 timeline: false,
@@ -208,10 +205,14 @@
                 navigationHelpButton: false,
                 selectionIndicator: false,
                 infoBox: false,
-                scene3DOnly: false 
+                scene3DOnly: false,
+                requestRenderMode: true,
+                maximumFPS: 30
             });
 
-            viewer.scene.globe.show = false;
+            viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
+            viewer.scene.globe.show = true; 
+            viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
             viewer.scene.skyAtmosphere.show = false;
             viewer.scene.globe.depthTestAgainstTerrain = true;
 
@@ -219,40 +220,31 @@
             viewer.scene.screenSpaceCameraController.maximumZoomDistance = 50000; 
 
             try {
-                // 1. Capa Esri World Imagery (Oculta por defecto en 3D)
+                const tilesetAssetId = 6134163;         
+                const orthoAssetId = 6134167;           
+
+                // 1. Capa Esri World Imagery (Fondo base global en 2D)
                 const esriImageryProvider = new Cesium.UrlTemplateImageryProvider({
                     url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                     maximumLevel: 19,
                     credit: 'Esri World Imagery'
                 });
-                const esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
-                esriLayer.show = false;
+                esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
+                esriLayer.show = false; 
 
-                // 2. Ortofoto Local con Calidad Máxima (Nivel 19)
-                const orthoAssetId = 6134167; 
+                // 2. Ortofoto Local del Dron (Con límite de nivel 14 para evitar errores 404 en los bordes)
                 const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId, {
-                    maximumLevel: 19 
+                    maximumLevel: 14
                 });
-                const orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
+                orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
+                orthoLayer.show = false; 
                 orthoLayer.maximumAnisotropy = viewer.maximumAnisotropy;
+                orthoLayer.minificationFilter = Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR;
+                orthoLayer.magnificationFilter = Cesium.TextureMagnificationFilter.LINEAR;
 
-                // --- ALERTA INTELIGENTE DE TESELAS FALTANTES ---
-                let warningTimeout = null;
-                orthoProvider.tileLoadError.addEventListener(() => {
-                    const coordsHud = document.getElementById('coords-hud');
-                    coordsHud.innerHTML = `⚠️ Límite de resolución de ortofoto alcanzado<br><span style="font-size: 9.5px; color: #f1c40f;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
-                    
-                    // Restablecer el mensaje normal después de 3 segundos de inactividad de zoom
-                    if (warningTimeout) clearTimeout(warningTimeout);
-                    warningTimeout = setTimeout(() => {
-                        // El mensaje se normalizará al mover el cursor nuevamente
-                    }, 3000);
-                });
-
-                // 3. Modelo 3D (Tileset)
-                const tilesetAssetId = 6134163; 
-                const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
-                tileset.maximumScreenSpaceError = 4; 
+                // 3. Cargar Modelo 3D (3D Tileset) - Activo en 3D
+                tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
+                tileset.maximumScreenSpaceError = 3; 
                 tileset.skipLevelOfDetail = false;   
                 tileset.immediatelyLoadDesiredLevelOfDetail = true; 
 
@@ -263,16 +255,12 @@
                     offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
                 });
 
-                console.log('Visor configurado con máxima resolución de ortofoto y control de teselas.');
-
-                // Brújula rotativa sincronizada con la cámara
                 const compassRose = document.getElementById('compass-rose');
                 viewer.scene.preRender.addEventListener(() => {
                     const heading = Cesium.Math.toDegrees(viewer.camera.heading);
                     compassRose.style.transform = `rotate(${-heading}deg)`;
                 });
 
-                // HUD de Coordenadas
                 const coordsHud = document.getElementById('coords-hud');
                 const moveHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
                 
@@ -283,34 +271,31 @@
                         const lat = Cesium.Math.toDegrees(cartographic.latitude).toFixed(6);
                         const lon = Cesium.Math.toDegrees(cartographic.longitude).toFixed(6);
                         const alt = cartographic.height.toFixed(2);
-                        coordsHud.innerHTML = `Lat: ${lat}° | Lon: ${lon}° | Alt: ${alt} m<br><span style="font-size: 9.5px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
-                    } else {
-                        coordsHud.innerHTML = `Fuera de cobertura<br><span style="font-size: 9.5px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
+                        
+                        if (activeMode === 'NONE') {
+                            coordsHud.innerHTML = `Lat: ${lat}° | Lon: ${lon}° | Alt: ${alt} m<br><span style="font-size: 9px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
+                        }
                     }
                 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-                // --- LÓGICA DE RECENTRADO ---
-                let is2D = false;
-                const btnRecenter = document.getElementById('btnRecenter');
-
-                btnRecenter.addEventListener('click', async () => {
+                // --- RECENTRAR INTELIGENTE ---
+                document.getElementById('btnRecenter').addEventListener('click', async () => {
                     if (is2D) {
-                        await viewer.flyTo(tileset, {
-                            duration: 1.0,
-                            offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-90), 300)
-                        });
+                        if (tileset && tileset.boundingSphere) {
+                            const centerCartographic = Cesium.Cartographic.fromCartesian(tileset.boundingSphere.center);
+                            await viewer.camera.flyTo({
+                                destination: Cesium.Cartesian3.fromRadians(centerCartographic.longitude, centerCartographic.latitude, 2500),
+                                duration: 1.2
+                            });
+                        }
                     } else {
                         await viewer.flyTo(tileset, {
                             duration: 1.2,
                             offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
                         });
                     }
+                    viewer.scene.requestRender();
                 });
-
-                // LÓGICA DE MEDICIÓN
-                let measureMode = 'NONE';
-                let activePoints = [];
-                let activeEntities = [];
 
                 const btnDist = document.getElementById('btnMeasureDist');
                 const btnArea = document.getElementById('btnMeasureArea');
@@ -318,37 +303,65 @@
 
                 btnDist.addEventListener('click', () => {
                     if (is2D) return;
-                    resetMeasurement();
-                    measureMode = 'DISTANCE';
+                    resetAllTools();
+                    activeMode = 'DISTANCE';
                     btnDist.classList.add('active');
-                    coordsHud.innerHTML = `Modo: Distancia activa<br><span style="font-size: 9.5px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
+                    coordsHud.innerHTML = `Modo: Distancia (Clic puntos, 2.º clic mide)`;
+                    viewer.scene.requestRender();
                 });
 
                 btnArea.addEventListener('click', () => {
                     if (is2D) return;
-                    resetMeasurement();
-                    measureMode = 'AREA';
+                    resetAllTools();
+                    activeMode = 'AREA';
                     btnArea.classList.add('active');
-                    coordsHud.innerHTML = `Modo: Área activa<br><span style="font-size: 9.5px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
+                    coordsHud.innerHTML = `Modo: Área (Agregue vértices en el tajo...)`;
+                    viewer.scene.requestRender();
                 });
 
                 btnClear.addEventListener('click', () => {
-                    resetMeasurement();
+                    resetAllTools();
+                    viewer.scene.requestRender();
                 });
 
-                function resetMeasurement() {
-                    measureMode = 'NONE';
+                function resetAllTools() {
+                    activeMode = 'NONE';
                     activePoints = [];
+                    activePolygonEntity = null;
                     activeEntities.forEach(ent => viewer.entities.remove(ent));
                     activeEntities = [];
                     btnDist.classList.remove('active');
                     btnArea.classList.remove('active');
+                    coordsHud.innerHTML = `Herramientas limpiadas.<br><span style="font-size: 9px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
+                    viewer.scene.requestRender();
+                }
+
+                function calculatePolygonArea(cartesianPoints) {
+                    if (cartesianPoints.length < 3) return 0;
+                    const refCartographic = Cesium.Cartographic.fromCartesian(cartesianPoints[0]);
+                    const refCenter = Cesium.Cartesian3.fromRadians(refCartographic.longitude, refCartographic.latitude, 0);
+                    
+                    const transform = Cesium.Transforms.eastNorthUpToFixedFrame(refCenter);
+                    const invTransform = Cesium.Matrix4.inverse(transform, new Cesium.Matrix4());
+                    
+                    const localPoints = cartesianPoints.map(pt => {
+                        const localPt = Cesium.Matrix4.multiplyByPoint(invTransform, pt, new Cesium.Cartesian3());
+                        return { x: localPt.x, y: localPt.y };
+                    });
+                    
+                    let area = 0;
+                    for (let i = 0; i < localPoints.length; i++) {
+                        const j = (i + 1) % localPoints.length;
+                        area += localPoints[i].x * localPoints[j].y;
+                        area -= localPoints[j].x * localPoints[i].y;
+                    }
+                    return Math.abs(area / 2.0);
                 }
 
                 const clickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
-                clickHandler.setInputAction((click) => {
-                    if (measureMode === 'NONE' || is2D) return;
+                clickHandler.setInputAction(async (click) => {
+                    if (activeMode === 'NONE' || is2D) return;
 
                     const cartesian = viewer.scene.pickPosition(click.position);
                     if (!Cesium.defined(cartesian)) return;
@@ -357,16 +370,16 @@
 
                     const pointEntity = viewer.entities.add({
                         position: cartesian,
-                        point: { pixelSize: 8, color: Cesium.Color.fromCssColorString('#3498db') }
+                        point: { pixelSize: 8, color: Cesium.Color.fromCssColorString('#B6812F') }
                     });
                     activeEntities.push(pointEntity);
 
-                    if (measureMode === 'DISTANCE' && activePoints.length >= 2) {
+                    if (activeMode === 'DISTANCE' && activePoints.length >= 2) {
                         const lineEntity = viewer.entities.add({
                             polyline: {
                                 positions: [...activePoints],
                                 width: 3,
-                                material: Cesium.Color.fromCssColorString('#3498db')
+                                material: Cesium.Color.fromCssColorString('#B6812F')
                             }
                         });
                         activeEntities.push(lineEntity);
@@ -375,65 +388,86 @@
                         for (let i = 0; i < activePoints.length - 1; i++) {
                             totalDist += Cesium.Cartesian3.distance(activePoints[i], activePoints[i+1]);
                         }
-                        coordsHud.innerHTML = `Distancia Total: ${totalDist.toFixed(2)} m<br><span style="font-size: 9.5px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
+                        coordsHud.innerHTML = `Distancia Total: ${totalDist.toFixed(2)} m`;
                     }
 
-                    if (measureMode === 'AREA' && activePoints.length >= 3) {
-                        const existingPoly = activeEntities.find(e => e.polygon);
-                        if (existingPoly) {
-                            viewer.entities.remove(existingPoly);
-                        }
-                        const polyEntity = viewer.entities.add({
-                            polygon: {
-                                hierarchy: new Cesium.PolygonHierarchy([...activePoints]),
-                                material: Cesium.Color.fromCssColorString('#2980b9').withAlpha(0.5),
-                                outline: true,
-                                outlineColor: Cesium.Color.fromCssColorString('#3498db')
+                    if (activeMode === 'AREA') {
+                        if (activePoints.length >= 3) {
+                            if (!activePolygonEntity) {
+                                activePolygonEntity = viewer.entities.add({
+                                    polygon: {
+                                        hierarchy: new Cesium.PolygonHierarchy([...activePoints]),
+                                        material: Cesium.Color.fromCssColorString('#24415D').withAlpha(0.5),
+                                        outline: true,
+                                        outlineColor: Cesium.Color.fromCssColorString('#B6812F')
+                                    }
+                                });
+                                activeEntities.push(activePolygonEntity);
+                            } else {
+                                activePolygonEntity.polygon.hierarchy = new Cesium.PolygonHierarchy([...activePoints]);
                             }
-                        });
-                        activeEntities.push(polyEntity);
-                        coordsHud.innerHTML = `Área activa (${activePoints.length} vértices)<br><span style="font-size: 9.5px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
+
+                            const areaM2 = calculatePolygonArea(activePoints);
+                            const areaHectareas = areaM2 / 10000;
+                            coordsHud.innerHTML = `Área: ${areaM2.toLocaleString('en-US', {maximumFractionDigits: 2})} m² (${areaHectareas.toFixed(4)} ha) | Vértices: ${activePoints.length}`;
+                        } else {
+                            coordsHud.innerHTML = `Modo Área: Faltan ${3 - activePoints.length} puntos para calcular...`;
+                        }
                     }
+                    viewer.scene.requestRender();
                 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-                // Control Switch 2D / 3D
+                // --- CONTROL SWITCH 2D / 3D ---
                 const toggleButton = document.getElementById('toggle2D3D');
-
                 toggleButton.addEventListener('click', async () => {
                     if (!is2D) {
+                        // Cambiar a Vista 2D
                         viewer.scene.morphTo2D(1.5);
                         viewer.scene.globe.show = true;
-                        esriLayer.show = true;
+                        
+                        esriLayer.show = true;   
+                        orthoLayer.show = true;  
+                        if (tileset) tileset.show = false; 
+
                         toggleButton.textContent = '🌐 Cambiar a Vista 3D';
                         is2D = true;
 
-                        resetMeasurement();
+                        resetAllTools();
                         btnDist.disabled = true;
                         btnArea.disabled = true;
-                        btnClear.disabled = true;
 
                         setTimeout(async () => {
-                            await viewer.flyTo(tileset, {
-                                duration: 1.0,
-                                offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-90), 300)
-                            });
+                            if (tileset && tileset.boundingSphere) {
+                                const centerCartographic = Cesium.Cartographic.fromCartesian(tileset.boundingSphere.center);
+                                await viewer.camera.flyTo({
+                                    destination: Cesium.Cartesian3.fromRadians(centerCartographic.longitude, centerCartographic.latitude, 2500),
+                                    duration: 1.2
+                                });
+                            }
+                            viewer.scene.requestRender();
                         }, 1600);
-
                     } else {
+                        // Cambiar a Vista 3D
                         viewer.scene.morphTo3D(1.5);
-                        viewer.scene.globe.show = false;
-                        esriLayer.show = false;
+                        viewer.scene.globe.show = true;
+                        viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
+                        viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
+                        
+                        esriLayer.show = false;  
+                        orthoLayer.show = false; 
+                        if (tileset) tileset.show = true; 
+
                         toggleButton.textContent = '🌐 Cambiar a Vista 2D';
                         is2D = false;
 
                         btnDist.disabled = false;
                         btnArea.disabled = false;
-                        btnClear.disabled = false;
 
                         await viewer.flyTo(tileset, {
                             duration: 1.5,
                             offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
                         });
+                        viewer.scene.requestRender();
                     }
                 });
 
