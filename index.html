@@ -321,13 +321,13 @@
                 esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
                 esriLayer.show = false;
 
-                // 3. Ortofoto Local del Dron (Limitada al nivel máximo real 15 para evitar errores 404)[cite: 4]
+                // 3. Ortofoto Local del Dron (CONFIGURADA A MÁXIMO NIVEL 14 para compensar alta densidad de pantalla y evitar errores 404)
                 const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId, {
-                    maximumLevel: 15 
+                    maximumLevel: 14 
                 });
                 orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
                 orthoLayer.show = false; 
-                orthoLayer.maximumAnisotropy = orthoLayer.maximumAnisotropy;
+                orthoLayer.maximumAnisotropy = viewer.maximumAnisotropy;
                 orthoLayer.minificationFilter = Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR;
                 orthoLayer.magnificationFilter = Cesium.TextureMagnificationFilter.LINEAR;
 
@@ -380,17 +380,16 @@
                     }
                 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-                // --- BOTÓN RECENTRAR BASADO EN LA OBRA ---
+                // --- RECENTRAR INTELIGENTE ---
                 document.getElementById('btnRecenter').addEventListener('click', async () => {
                     if (tileset && tileset.boundingSphere) {
                         const centerCartographic = Cesium.Cartographic.fromCartesian(tileset.boundingSphere.center);
-                        const targetPosition = Cesium.Cartesian3.fromRadians(
-                            centerCartographic.longitude,
-                            centerCartographic.latitude,
-                            is2D ? 2500 : 200 // Altura distinta según 2D o 3D
-                        );
                         await viewer.camera.flyTo({
-                            destination: targetPosition,
+                            destination: Cesium.Cartesian3.fromRadians(
+                                centerCartographic.longitude,
+                                centerCartographic.latitude,
+                                is2D ? 2500 : 200
+                            ),
                             duration: 1.2
                         });
                     }
@@ -631,7 +630,7 @@
                     });
                 }
 
-                // --- CONTROL SWITCH 2D / 3D CON CENTRADO EXACTO EN EL TAJO ---
+                // --- CONTROL SWITCH 2D / 3D CORREGIDO ---
                 const toggleButton = document.getElementById('toggle2D3D');
                 toggleButton.addEventListener('click', async () => {
                     if (!is2D) {
@@ -658,7 +657,7 @@
                                     destination: Cesium.Cartesian3.fromRadians(
                                         centerCartographic.longitude,
                                         centerCartographic.latitude,
-                                        2500 // Altura cenital perfecta para ver la ortofoto en 2D sin salirse al mapa global
+                                        2500
                                     ),
                                     duration: 1.2
                                 });
