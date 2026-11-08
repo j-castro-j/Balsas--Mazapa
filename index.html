@@ -231,23 +231,46 @@
                 esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
                 esriLayer.show = false; 
 
-                // 2. Ortofoto Local del Dron A MÁXIMA CALIDAD (Sin restricciones de nivel)
+                // 2. Ortofoto Local del Dron A MÁXIMA CALIDAD
                 const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
+                
+                // ====================================================================
+                // FIX SENIOR: Interceptor de Peticiones para Teselas Vacías (404)
+                // En lugar de arrojar error y pintar negro en Vista 2D, inyectamos un 
+                // canvas transparente dinámico cuando Cesium choca con los bordes irregulares.
+                // ====================================================================
+                const originalRequestImage = orthoProvider.requestImage.bind(orthoProvider);
+                orthoProvider.requestImage = async function(x, y, level, request) {
+                    try {
+                        const imageOrPromise = originalRequestImage(x, y, level, request);
+                        if (!imageOrPromise) return undefined;
+                        return await Promise.resolve(imageOrPromise);
+                    } catch (error) {
+                        // Si falla (Ej. 404 Not Found), creamos un Tile transparente al vuelo
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 256;
+                        canvas.height = 256;
+                        // Al no dibujar nada en el contexto 2d, queda 100% transparente
+                        return canvas; 
+                    }
+                };
+                // ====================================================================
+
                 orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
                 orthoLayer.show = false; 
                 
-                // --- SOLUCIÓN: FORZAR TRANSPARENCIA EN PÍXELES NEGROS ---
+                // Mantenemos el filtro Alpha por si existen píxeles negros codificados dentro de las teselas válidas
                 orthoLayer.colorToAlpha = Cesium.Color.BLACK;
-                orthoLayer.colorToAlphaThreshold = 0.05; // Ajusta entre 0.01 y 0.1 si quedan halos oscuros
+                orthoLayer.colorToAlphaThreshold = 0.05; 
                 
-                // --- FORZAR MÁXIMA NITIDEZ Y FILTRADO GRÁFICO ---
-                orthoLayer.maximumAnisotropy = 16; // Máximo detalle en vistas sesgadas/inclinadas
+                // Filtros de nitidez
+                orthoLayer.maximumAnisotropy = 16;
                 orthoLayer.minificationFilter = Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR;
                 orthoLayer.magnificationFilter = Cesium.TextureMagnificationFilter.LINEAR;
 
                 // 3. Cargar Modelo 3D (3D Tileset)
                 tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
-                tileset.maximumScreenSpaceError = 2; // Mayor precisión geométrica en el tajo
+                tileset.maximumScreenSpaceError = 2; 
                 tileset.skipLevelOfDetail = false;   
                 tileset.immediatelyLoadDesiredLevelOfDetail = true; 
 
@@ -424,7 +447,6 @@
                 const toggleButton = document.getElementById('toggle2D3D');
                 toggleButton.addEventListener('click', async () => {
                     if (!is2D) {
-                        // Cambiar a Vista 2D
                         viewer.scene.morphTo2D(1.5);
                         viewer.scene.globe.show = true;
                         
@@ -452,7 +474,6 @@
                             viewer.scene.requestRender();
                         }, 1600);
                     } else {
-                        // Cambiar a Vista 3D
                         viewer.scene.morphTo3D(1.5);
                         viewer.scene.globe.show = true;
                         viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
