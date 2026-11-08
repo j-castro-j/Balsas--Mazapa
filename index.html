@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visor Topográfico 3D / 2D - Cañada Balsas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cañada Balsas - Mazapa / Noviembre 2026</title>
     
     <!-- Estilos oficiales de CesiumJS -->
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
@@ -16,82 +16,85 @@
             padding: 0;
             overflow: hidden;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #000;
+            background-color: #050b14;
+            touch-action: none;
         }
 
         /* Título Superior Izquierdo */
         #app-title {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            top: 15px;
+            left: 15px;
             z-index: 10;
-            background: rgba(28, 35, 45, 0.92);
+            background: rgba(36, 65, 93, 0.92);
             color: #ffffff;
-            padding: 12px 18px;
+            padding: 10px 16px;
             border-radius: 6px;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 700;
             letter-spacing: 0.8px;
-            border-left: 5px solid #3498db;
-            border-top: 1px solid rgba(52, 152, 219, 0.4);
-            border-right: 1px solid rgba(52, 152, 219, 0.4);
-            border-bottom: 1px solid rgba(52, 152, 219, 0.4);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            border-left: 5px solid #B6812F;
+            border-top: 1px solid rgba(182, 129, 47, 0.4);
+            border-right: 1px solid rgba(182, 129, 47, 0.4);
+            border-bottom: 1px solid rgba(182, 129, 47, 0.4);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
             pointer-events: none;
         }
 
-        /* Barra Vertical de Herramientas */
+        /* Barra Vertical de Herramientas Centrada a la Izquierda */
         #vertical-toolbox {
             position: absolute;
-            top: 80px;
-            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            left: 15px;
             z-index: 10;
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            background: rgba(28, 35, 45, 0.85);
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(52, 152, 219, 0.5);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            width: 210px;
+            gap: 8px;
+            background: rgba(36, 65, 93, 0.9);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #B6812F;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            width: 200px;
         }
 
         .cesium-button {
-            background: #1c232d;
-            border: 1px solid #3498db;
+            background: #24415D;
+            border: 1px solid #B6812F;
             color: #ffffff;
-            padding: 9px 12px;
-            border-radius: 4px;
+            padding: 12px 14px; /* Optimizado para pantallas táctiles */
+            border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
             font-size: 13px;
             text-align: left;
             transition: background 0.2s, border-color 0.2s;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .cesium-button:hover {
-            background: #2c3e50;
-            border-color: #5dade2;
+        .cesium-button:hover, .cesium-button:active {
+            background: #31567a;
+            border-color: #f3d07e;
         }
 
         .cesium-button.active {
-            background: #2980b9;
+            background: #B6812F;
             border-color: #ffffff;
             color: #ffffff;
         }
 
-        /* Brújula Ejecutiva Vectorial (100px) */
+        /* Brújula Ejecutiva con Etiquetas Cardinales (130px) */
         #compass-container {
             position: absolute;
-            top: 20px;
-            right: 20px;
+            top: 15px;
+            right: 15px;
             z-index: 10;
-            width: 150px;
-            height: 150px;
-            background: rgba(28, 35, 45, 0.88);
-            border: 2px solid #3498db;
+            width: 130px;
+            height: 130px;
+            background: rgba(36, 65, 93, 0.9);
+            border: 2px solid #B6812F;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -100,30 +103,39 @@
             pointer-events: none;
         }
 
-        #compass-arrow {
-            width: 120px;
-            height: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        #compass-rose {
+            width: 110px;
+            height: 110px;
             transition: transform 0.05s linear;
         }
 
-        /* HUD de Coordenadas */
+        /* HUD de Coordenadas Adaptable */
         #coords-hud {
             position: absolute;
             bottom: 15px;
             left: 15px;
             z-index: 10;
-            background: rgba(28, 35, 45, 0.9);
-            color: #5dade2;
+            background: rgba(36, 65, 93, 0.9);
+            color: #f3d07e;
             font-family: monospace;
-            font-size: 13px;
+            font-size: 12px;
             padding: 8px 12px;
-            border-radius: 4px;
-            border: 1px solid #3498db;
+            border-radius: 6px;
+            border: 1px solid #B6812F;
             box-shadow: 0 2px 10px rgba(0,0,0,0.4);
             pointer-events: none;
+            max-width: 90vw;
+            box-sizing: border-box;
+        }
+
+        /* Ajustes responsivos para dispositivos móviles (S24 Ultra / tablets) */
+        @media (max-width: 768px) {
+            #app-title { font-size: 12px; padding: 8px 12px; }
+            #vertical-toolbox { width: 170px; padding: 8px; }
+            .cesium-button { padding: 10px; font-size: 12px; }
+            #compass-container { width: 100px; height: 100px; top: 10px; right: 10px; }
+            #compass-rose { width: 85px; height: 85px; }
+            #coords-hud { font-size: 11px; bottom: 10px; left: 10px; }
         }
     </style>
 </head>
@@ -135,23 +147,32 @@
     <!-- Contenedor del Visor -->
     <div id="cesiumContainer"></div>
 
-    <!-- Barra Vertical de Herramientas -->
+    <!-- Barra Vertical de Herramientas (Centrada a la Izquierda) -->
     <div id="vertical-toolbox">
         <button id="toggle2D3D" class="cesium-button">🌐 Cambiar a Vista 2D</button>
         <button id="btnMeasureDist" class="cesium-button">📏 Medir Distancia</button>
         <button id="btnMeasureArea" class="cesium-button">📐 Medir Área</button>
-        <button id="btnClearMeasure" class="cesium-button" style="background: #5a2222; border-color: #aa4444;">🧹 Limpiar Mediciones</button>
+        <button id="btnClearMeasure" class="cesium-button" style="background: #5a2222; border-color: #aa4444;">🧹 Limpiar</button>
     </div>
 
-    <!-- Brújula Ejecutiva Vectorial -->
+    <!-- Brújula Ejecutiva con Etiquetas (N, S, E, W) -->
     <div id="compass-container">
-        <div id="compass-arrow">
-            <svg width="90" height="90" viewBox="0 0 100 100">
-                <polygon points="50,8 58,50 50,42" fill="#e74c3c"/>
-                <polygon points="50,8 42,50 50,42" fill="#c0392b"/>
-                <polygon points="50,92 58,50 50,58" fill="#bdc3c7"/>
-                <polygon points="50,92 42,50 50,58" fill="#95a5a6"/>
-                <circle cx="50" cy="50" r="5" fill="#1c232d" stroke="#3498db" stroke-width="2"/>
+        <div id="compass-rose">
+            <svg width="100%" height="100%" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="46" fill="#24415D" stroke="#B6812F" stroke-width="1.5"/>
+                <!-- Etiquetas Cardinales -->
+                <text x="50" y="15" fill="#f3d07e" font-size="11" font-weight="bold" text-anchor="middle">N</text>
+                <text x="50" y="94" fill="#ffffff" font-size="9" text-anchor="middle">S</text>
+                <text x="90" y="53.5" fill="#ffffff" font-size="9" text-anchor="middle">E</text>
+                <text x="10" y="53.5" fill="#ffffff" font-size="9" text-anchor="middle">W</text>
+                <!-- Aguja Norte -->
+                <polygon points="50,22 53,50 50,44" fill="#e74c3c"/>
+                <polygon points="50,22 47,50 50,44" fill="#c0392b"/>
+                <!-- Aguja Sur -->
+                <polygon points="50,78 53,50 50,56" fill="#bdc3c7"/>
+                <polygon points="50,78 47,50 50,56" fill="#95a5a6"/>
+                <!-- Pivote -->
+                <circle cx="50" cy="50" r="4" fill="#B6812F" stroke="#ffffff" stroke-width="1"/>
             </svg>
         </div>
     </div>
@@ -166,7 +187,6 @@
         Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImFveUJVMGZrSnJLaDY4YnAiLCJqdGkiOiI3YTAzYzNiNi04M2Y0LTQzNTYtYTUwZS0xZjFlYjRiYTFiMDEiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBCYWxzYXMgV0dTODQiLCJpYXQiOjE3OTQxNDg3OTR9.LmMadfxwRLLqVzBvfdqgrtytkdqtiiIawye9J63QEwI'; // Reemplaza con tu token válido
 
         async function initViewer() {
-            // Inicializar el visor con widgets por defecto deshabilitados
             const viewer = new Cesium.Viewer('cesiumContainer', {
                 imageryProvider: false,
                 baseLayerPicker: false,
@@ -179,31 +199,32 @@
                 scene3DOnly: false 
             });
 
-            viewer.scene.globe.show = true;
-            viewer.scene.skyAtmosphere.show = true;
+            // En vista 3D inicial, ocultamos el globo para ver exclusivamente nuestro modelo y ortofoto
+            viewer.scene.globe.show = false;
+            viewer.scene.skyAtmosphere.show = false;
 
             viewer.scene.screenSpaceCameraController.minimumZoomDistance = 2; 
             viewer.scene.screenSpaceCameraController.maximumZoomDistance = 50000; 
 
             try {
-                // --- 1. CARGAR MAPA BASE SATELITAL DE ENTORNO (Esri World Imagery) ---
-                // Esto elimina cualquier error de tipo incompatible en Cesium ion
-                const baseSatelliteProvider = new Cesium.UrlTemplateImageryProvider({
+                // 1. Capa Esri World Imagery (Creada pero oculta por defecto en 3D)
+                const esriImageryProvider = new Cesium.UrlTemplateImageryProvider({
                     url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                     maximumLevel: 19,
                     credit: 'Esri World Imagery'
                 });
-                viewer.imageryLayers.addImageryProvider(baseSatelliteProvider);
+                const esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
+                esriLayer.show = false; // Oculto en 3D para mostrar solo el modelo
 
-                // --- 2. CARGAR ORTOFOTO LOCAL EN ALTA DEFINICIÓN ---
+                // 2. Ortofoto Local (Nivel máximo 15 para evitar errores 404)
                 const orthoAssetId = 6134167; 
                 const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId, {
-                    maximumLevel: 19 
+                    maximumLevel: 15 
                 });
                 const orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
                 orthoLayer.maximumAnisotropy = viewer.maximumAnisotropy;
 
-                // --- 3. CARGAR MODELO 3D (3D Tileset) ---
+                // 3. Modelo 3D (Tileset)
                 const tilesetAssetId = 6134163; 
                 const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
                 tileset.maximumScreenSpaceError = 4; 
@@ -212,19 +233,19 @@
 
                 viewer.scene.primitives.add(tileset);
 
-                // Enfocar cámara inicial directamente en el modelo
+                // Enfocar cámara inicial en el modelo
                 await viewer.flyTo(tileset, {
                     duration: 2.0,
                     offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
                 });
 
-                console.log('Visor inicializado con éxito: mapa base satelital y modelo cargados.');
+                console.log('Visor optimizado para móvil y escritorio inicializado con éxito.');
 
-                // Brújula ejecutiva (preRender)
-                const compassArrow = document.getElementById('compass-arrow');
+                // Brújula rotativa sincronizada con la cámara
+                const compassRose = document.getElementById('compass-rose');
                 viewer.scene.preRender.addEventListener(() => {
                     const heading = Cesium.Math.toDegrees(viewer.camera.heading);
-                    compassArrow.style.transform = `rotate(${-heading}deg)`;
+                    compassRose.style.transform = `rotate(${-heading}deg)`;
                 });
 
                 // HUD de Coordenadas
@@ -292,7 +313,7 @@
 
                     const pointEntity = viewer.entities.add({
                         position: cartesian,
-                        point: { pixelSize: 8, color: Cesium.Color.fromCssColorString('#3498db') }
+                        point: { pixelSize: 8, color: Cesium.Color.fromCssColorString('#B6812F') }
                     });
                     activeEntities.push(pointEntity);
 
@@ -301,7 +322,7 @@
                             polyline: {
                                 positions: [...activePoints],
                                 width: 3,
-                                material: Cesium.Color.fromCssColorString('#3498db')
+                                material: Cesium.Color.fromCssColorString('#B6812F')
                             }
                         });
                         activeEntities.push(lineEntity);
@@ -321,9 +342,9 @@
                         const polyEntity = viewer.entities.add({
                             polygon: {
                                 hierarchy: new Cesium.PolygonHierarchy([...activePoints]),
-                                material: Cesium.Color.fromCssColorString('#2980b9').withAlpha(0.5),
+                                material: Cesium.Color.fromCssColorString('#24415D').withAlpha(0.6),
                                 outline: true,
-                                outlineColor: Cesium.Color.fromCssColorString('#3498db')
+                                outlineColor: Cesium.Color.fromCssColorString('#B6812F')
                             }
                         });
                         activeEntities.push(polyEntity);
@@ -331,13 +352,16 @@
                     }
                 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-                // Control Switch 2D / 3D
+                // Control Switch 2D / 3D (Alternando contexto Esri y Globo)
                 let is2D = false;
                 const toggleButton = document.getElementById('toggle2D3D');
 
                 toggleButton.addEventListener('click', async () => {
                     if (!is2D) {
+                        // Cambiar a 2D: Activamos el globo y el mapa base Esri
                         viewer.scene.morphTo2D(1.5);
+                        viewer.scene.globe.show = true;
+                        esriLayer.show = true;
                         toggleButton.textContent = '🌐 Cambiar a Vista 3D';
                         is2D = true;
 
@@ -349,7 +373,10 @@
                         }, 1600);
 
                     } else {
+                        // Cambiar a 3D: Ocultamos globo y Esri para ver SOLO nuestro modelo
                         viewer.scene.morphTo3D(1.5);
+                        viewer.scene.globe.show = false;
+                        esriLayer.show = false;
                         toggleButton.textContent = '🌐 Cambiar a Vista 2D';
                         is2D = false;
 
