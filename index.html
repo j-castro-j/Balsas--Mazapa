@@ -182,10 +182,9 @@
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"></script>
 
     <script>
-        // Configura tu token de Cesium ion
         Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImFveUJVMGZrSnJLaDY4YnAiLCJqdGkiOiI3YTAzYzNiNi04M2Y0LTQzNTYtYTUwZS0xZjFlYjRiYTFiMDEiLCJpZCI6NDc3MzE0LCJzdWIiOiJqY2FzdHJvaiIsImlzcyI6Imh0dHBzOi8vYXBpLmNlc2l1bS5jb20iLCJhdWQiOiJUb2tlbiBCYWxzYXMgV0dTODQiLCJpYXQiOjE3OTQxNDg3OTR9.LmMadfxwRLLqVzBvfdqgrtytkdqtiiIawye9J63QEwI'; 
 
-        let viewer, tileset, orthoLayer, esriLayer;
+        let viewer, tileset, orthoLayer, esriLayer, orthoProvider;
         let activeMode = 'NONE';
         let activePoints = [];
         let activeEntities = [];
@@ -205,7 +204,7 @@
                 selectionIndicator: false,
                 infoBox: false,
                 scene3DOnly: false,
-                requestRenderMode: true,
+                requestRenderMode: true, // Optimización activada
                 maximumFPS: 30
             });
 
@@ -214,7 +213,6 @@
             viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
             viewer.scene.skyAtmosphere.show = false;
             viewer.scene.globe.depthTestAgainstTerrain = false;
-
             viewer.scene.screenSpaceCameraController.minimumZoomDistance = 2; 
             viewer.scene.screenSpaceCameraController.maximumZoomDistance = 50000; 
 
@@ -222,7 +220,7 @@
                 const tilesetAssetId = 6134163; // Modelo 3D
                 const orthoAssetId = 6134167;   // Ortofoto
 
-                // 1. Capa Esri World Imagery (Fondo base global para 2D)
+                // 1. Capa Esri (Fondo base)
                 const esriImageryProvider = new Cesium.UrlTemplateImageryProvider({
                     url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                     maximumLevel: 19,
@@ -231,49 +229,24 @@
                 esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
                 esriLayer.show = false; 
 
-                // 2. Ortofoto Local del Dron A MÁXIMA CALIDAD
-                const orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
-                
-                // ====================================================================
-                // FIX SENIOR: Interceptor de Peticiones para Teselas Vacías (404)
-                // En lugar de arrojar error y pintar negro en Vista 2D, inyectamos un 
-                // canvas transparente dinámico cuando Cesium choca con los bordes irregulares.
-                // ====================================================================
-                const originalRequestImage = orthoProvider.requestImage.bind(orthoProvider);
-                orthoProvider.requestImage = async function(x, y, level, request) {
-                    try {
-                        const imageOrPromise = originalRequestImage(x, y, level, request);
-                        if (!imageOrPromise) return undefined;
-                        return await Promise.resolve(imageOrPromise);
-                    } catch (error) {
-                        // Si falla (Ej. 404 Not Found), creamos un Tile transparente al vuelo
-                        const canvas = document.createElement('canvas');
-                        canvas.width = 256;
-                        canvas.height = 256;
-                        // Al no dibujar nada en el contexto 2d, queda 100% transparente
-                        return canvas; 
-                    }
-                };
-                // ====================================================================
-
+                // 2. Ortofoto Local
+                orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
                 orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
                 orthoLayer.show = false; 
                 
-                // Mantenemos el filtro Alpha por si existen píxeles negros codificados dentro de las teselas válidas
+                // Transparencia súper estricta solo para negro puro
                 orthoLayer.colorToAlpha = Cesium.Color.BLACK;
-                orthoLayer.colorToAlphaThreshold = 0.05; 
+                orthoLayer.colorToAlphaThreshold = 0.01; 
                 
-                // Filtros de nitidez
                 orthoLayer.maximumAnisotropy = 16;
                 orthoLayer.minificationFilter = Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR;
                 orthoLayer.magnificationFilter = Cesium.TextureMagnificationFilter.LINEAR;
 
-                // 3. Cargar Modelo 3D (3D Tileset)
+                // 3. Modelo 3D (3D Tileset)
                 tileset = await Cesium.Cesium3DTileset.fromIonAssetId(tilesetAssetId);
                 tileset.maximumScreenSpaceError = 2; 
                 tileset.skipLevelOfDetail = false;   
                 tileset.immediatelyLoadDesiredLevelOfDetail = true; 
-
                 viewer.scene.primitives.add(tileset);
 
                 await viewer.flyTo(tileset, {
@@ -281,6 +254,7 @@
                     offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
                 });
 
+                // --- HUD & Brujula ---
                 const compassRose = document.getElementById('compass-rose');
                 viewer.scene.preRender.addEventListener(() => {
                     const heading = Cesium.Math.toDegrees(viewer.camera.heading);
@@ -289,7 +263,6 @@
 
                 const coordsHud = document.getElementById('coords-hud');
                 const moveHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-                
                 moveHandler.setInputAction((movement) => {
                     const cartesian = viewer.scene.pickPosition(movement.endPosition);
                     if (Cesium.defined(cartesian)) {
@@ -297,25 +270,83 @@
                         const lat = Cesium.Math.toDegrees(cartographic.latitude).toFixed(6);
                         const lon = Cesium.Math.toDegrees(cartographic.longitude).toFixed(6);
                         const alt = cartographic.height.toFixed(2);
-                        
                         if (activeMode === 'NONE') {
                             coordsHud.innerHTML = `Lat: ${lat}° | Lon: ${lon}° | Alt: ${alt} m<br><span style="font-size: 9px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
                         }
                     }
                 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-                // --- RECENTRAR INTELIGENTE ---
-                document.getElementById('btnRecenter').addEventListener('click', async () => {
-                    if (is2D) {
-                        if (tileset && tileset.boundingSphere) {
-                            const centerCartographic = Cesium.Cartographic.fromCartesian(tileset.boundingSphere.center);
-                            await viewer.camera.flyTo({
-                                destination: Cesium.Cartesian3.fromRadians(centerCartographic.longitude, centerCartographic.latitude, 2500),
-                                duration: 1.2
+                // --- CONTROL SWITCH 2D / 3D ---
+                const toggleButton = document.getElementById('toggle2D3D');
+                toggleButton.addEventListener('click', () => {
+                    
+                    // FIX: Desactivar requestRenderMode temporalmente para que fluyan los tiles al animar
+                    viewer.scene.requestRenderMode = false;
+
+                    if (!is2D) {
+                        viewer.scene.morphTo2D(1.5);
+                        viewer.scene.globe.show = true;
+                        
+                        esriLayer.show = true;   
+                        orthoLayer.show = true;  
+                        viewer.imageryLayers.raiseToTop(orthoLayer);
+                        if (tileset) tileset.show = false; 
+
+                        toggleButton.textContent = '🌐 Cambiar a Vista 3D';
+                        is2D = true;
+                        resetAllTools();
+                        document.getElementById('btnMeasureDist').disabled = true;
+                        document.getElementById('btnMeasureArea').disabled = true;
+
+                        // Volar exactamente al rectángulo de la ortofoto (Bounding Box 2D) y reactivar renderMode
+                        setTimeout(() => {
+                            viewer.camera.flyTo({
+                                destination: orthoProvider.rectangle,
+                                duration: 1.0,
+                                complete: () => {
+                                    viewer.scene.requestRenderMode = true;
+                                    viewer.scene.requestRender();
+                                }
                             });
-                        }
+                        }, 1500);
+
                     } else {
-                        await viewer.flyTo(tileset, {
+                        viewer.scene.morphTo3D(1.5);
+                        viewer.scene.globe.show = true;
+                        viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
+                        viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
+                        
+                        esriLayer.show = false;  
+                        orthoLayer.show = false; 
+                        if (tileset) tileset.show = true; 
+
+                        toggleButton.textContent = '🌐 Cambiar a Vista 2D';
+                        is2D = false;
+                        document.getElementById('btnMeasureDist').disabled = false;
+                        document.getElementById('btnMeasureArea').disabled = false;
+
+                        // Volar al modelo 3D y reactivar renderMode
+                        setTimeout(() => {
+                            viewer.flyTo(tileset, {
+                                duration: 1.0,
+                                offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
+                            }).then(() => {
+                                viewer.scene.requestRenderMode = true;
+                                viewer.scene.requestRender();
+                            });
+                        }, 1500);
+                    }
+                });
+
+                // --- LÓGICA DE RECENTRADO ---
+                document.getElementById('btnRecenter').addEventListener('click', () => {
+                    if (is2D) {
+                        viewer.camera.flyTo({
+                            destination: orthoProvider.rectangle,
+                            duration: 1.2
+                        });
+                    } else {
+                        viewer.flyTo(tileset, {
                             duration: 1.2,
                             offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
                         });
@@ -323,6 +354,7 @@
                     viewer.scene.requestRender();
                 });
 
+                // --- HERRAMIENTAS DE MEDICIÓN ---
                 const btnDist = document.getElementById('btnMeasureDist');
                 const btnArea = document.getElementById('btnMeasureArea');
                 const btnClear = document.getElementById('btnClearMeasure');
@@ -366,15 +398,12 @@
                     if (cartesianPoints.length < 3) return 0;
                     const refCartographic = Cesium.Cartographic.fromCartesian(cartesianPoints[0]);
                     const refCenter = Cesium.Cartesian3.fromRadians(refCartographic.longitude, refCartographic.latitude, 0);
-                    
                     const transform = Cesium.Transforms.eastNorthUpToFixedFrame(refCenter);
                     const invTransform = Cesium.Matrix4.inverse(transform, new Cesium.Matrix4());
-                    
                     const localPoints = cartesianPoints.map(pt => {
                         const localPt = Cesium.Matrix4.multiplyByPoint(invTransform, pt, new Cesium.Cartesian3());
                         return { x: localPt.x, y: localPt.y };
                     });
-                    
                     let area = 0;
                     for (let i = 0; i < localPoints.length; i++) {
                         const j = (i + 1) % localPoints.length;
@@ -385,15 +414,12 @@
                 }
 
                 const clickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-
                 clickHandler.setInputAction(async (click) => {
                     if (activeMode === 'NONE' || is2D) return;
-
                     const cartesian = viewer.scene.pickPosition(click.position);
                     if (!Cesium.defined(cartesian)) return;
 
                     activePoints.push(cartesian);
-
                     const pointEntity = viewer.entities.add({
                         position: cartesian,
                         point: { pixelSize: 8, color: Cesium.Color.fromCssColorString('#B6812F') }
@@ -409,7 +435,6 @@
                             }
                         });
                         activeEntities.push(lineEntity);
-
                         let totalDist = 0;
                         for (let i = 0; i < activePoints.length - 1; i++) {
                             totalDist += Cesium.Cartesian3.distance(activePoints[i], activePoints[i+1]);
@@ -432,7 +457,6 @@
                             } else {
                                 activePolygonEntity.polygon.hierarchy = new Cesium.PolygonHierarchy([...activePoints]);
                             }
-
                             const areaM2 = calculatePolygonArea(activePoints);
                             const areaHectareas = areaM2 / 10000;
                             coordsHud.innerHTML = `Área: ${areaM2.toLocaleString('en-US', {maximumFractionDigits: 2})} m² (${areaHectareas.toFixed(4)} ha) | Vértices: ${activePoints.length}`;
@@ -442,60 +466,6 @@
                     }
                     viewer.scene.requestRender();
                 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-                // --- CONTROL SWITCH 2D / 3D ---
-                const toggleButton = document.getElementById('toggle2D3D');
-                toggleButton.addEventListener('click', async () => {
-                    if (!is2D) {
-                        viewer.scene.morphTo2D(1.5);
-                        viewer.scene.globe.show = true;
-                        
-                        esriLayer.show = true;   
-                        orthoLayer.show = true;  
-                        viewer.imageryLayers.raiseToTop(orthoLayer);
-
-                        if (tileset) tileset.show = false; 
-
-                        toggleButton.textContent = '🌐 Cambiar a Vista 3D';
-                        is2D = true;
-
-                        resetAllTools();
-                        btnDist.disabled = true;
-                        btnArea.disabled = true;
-
-                        setTimeout(async () => {
-                            if (tileset && tileset.boundingSphere) {
-                                const centerCartographic = Cesium.Cartographic.fromCartesian(tileset.boundingSphere.center);
-                                await viewer.camera.flyTo({
-                                    destination: Cesium.Cartesian3.fromRadians(centerCartographic.longitude, centerCartographic.latitude, 2500),
-                                    duration: 1.2
-                                });
-                            }
-                            viewer.scene.requestRender();
-                        }, 1600);
-                    } else {
-                        viewer.scene.morphTo3D(1.5);
-                        viewer.scene.globe.show = true;
-                        viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
-                        viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
-                        
-                        esriLayer.show = false;  
-                        orthoLayer.show = false; 
-                        if (tileset) tileset.show = true; 
-
-                        toggleButton.textContent = '🌐 Cambiar a Vista 2D';
-                        is2D = false;
-
-                        btnDist.disabled = false;
-                        btnArea.disabled = false;
-
-                        await viewer.flyTo(tileset, {
-                            duration: 1.5,
-                            offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
-                        });
-                        viewer.scene.requestRender();
-                    }
-                });
 
             } catch (error) {
                 console.error('Error al inicializar los recursos:', error);
