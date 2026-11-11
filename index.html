@@ -204,8 +204,9 @@
                 selectionIndicator: false,
                 infoBox: false,
                 scene3DOnly: false,
-                requestRenderMode: true, // Optimización activada
-                maximumFPS: 30
+                // FIX SENIOR: Renderizado continuo. Evita que las texturas 2D se queden cargando en negro.
+                requestRenderMode: false, 
+                maximumFPS: 60
             });
 
             viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
@@ -220,24 +221,19 @@
                 const tilesetAssetId = 6134163; // Modelo 3D
                 const orthoAssetId = 6134167;   // Ortofoto
 
-                // 1. Capa Esri (Fondo base)
+                // 1. Capa Esri (Fondo base global) - Siempre encendida
                 const esriImageryProvider = new Cesium.UrlTemplateImageryProvider({
                     url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                     maximumLevel: 19,
                     credit: 'Esri World Imagery'
                 });
                 esriLayer = viewer.imageryLayers.addImageryProvider(esriImageryProvider);
-                esriLayer.show = false; 
 
-                // 2. Ortofoto Local
+                // 2. Ortofoto Local - Siempre encendida, montada encima de Esri
                 orthoProvider = await Cesium.IonImageryProvider.fromAssetId(orthoAssetId);
                 orthoLayer = viewer.imageryLayers.addImageryProvider(orthoProvider);
-                orthoLayer.show = false; 
                 
-                // Transparencia súper estricta solo para negro puro
-                orthoLayer.colorToAlpha = Cesium.Color.BLACK;
-                orthoLayer.colorToAlphaThreshold = 0.01; 
-                
+                // Filtros visuales para máxima calidad sin alterar el canal alfa
                 orthoLayer.maximumAnisotropy = 16;
                 orthoLayer.minificationFilter = Cesium.TextureMinificationFilter.LINEAR_MIPMAP_LINEAR;
                 orthoLayer.magnificationFilter = Cesium.TextureMagnificationFilter.LINEAR;
@@ -254,7 +250,7 @@
                     offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
                 });
 
-                // --- HUD & Brujula ---
+                // --- HUD & Brújula ---
                 const compassRose = document.getElementById('compass-rose');
                 viewer.scene.preRender.addEventListener(() => {
                     const heading = Cesium.Math.toDegrees(viewer.camera.heading);
@@ -280,16 +276,11 @@
                 const toggleButton = document.getElementById('toggle2D3D');
                 toggleButton.addEventListener('click', () => {
                     
-                    // FIX: Desactivar requestRenderMode temporalmente para que fluyan los tiles al animar
-                    viewer.scene.requestRenderMode = false;
-
                     if (!is2D) {
+                        // Cambiar a 2D
                         viewer.scene.morphTo2D(1.5);
-                        viewer.scene.globe.show = true;
                         
-                        esriLayer.show = true;   
-                        orthoLayer.show = true;  
-                        viewer.imageryLayers.raiseToTop(orthoLayer);
+                        // Solo ocultamos el 3D. Las ortofotos 2D ya están ahí abajo.
                         if (tileset) tileset.show = false; 
 
                         toggleButton.textContent = '🌐 Cambiar a Vista 3D';
@@ -298,26 +289,18 @@
                         document.getElementById('btnMeasureDist').disabled = true;
                         document.getElementById('btnMeasureArea').disabled = true;
 
-                        // Volar exactamente al rectángulo de la ortofoto (Bounding Box 2D) y reactivar renderMode
+                        // Esperamos a que termine la animación morph para no romper la cámara
                         setTimeout(() => {
                             viewer.camera.flyTo({
                                 destination: orthoProvider.rectangle,
-                                duration: 1.0,
-                                complete: () => {
-                                    viewer.scene.requestRenderMode = true;
-                                    viewer.scene.requestRender();
-                                }
+                                duration: 1.0
                             });
-                        }, 1500);
+                        }, 1600);
 
                     } else {
+                        // Cambiar a 3D
                         viewer.scene.morphTo3D(1.5);
-                        viewer.scene.globe.show = true;
-                        viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#050b14');
-                        viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#050b14');
                         
-                        esriLayer.show = false;  
-                        orthoLayer.show = false; 
                         if (tileset) tileset.show = true; 
 
                         toggleButton.textContent = '🌐 Cambiar a Vista 2D';
@@ -325,16 +308,12 @@
                         document.getElementById('btnMeasureDist').disabled = false;
                         document.getElementById('btnMeasureArea').disabled = false;
 
-                        // Volar al modelo 3D y reactivar renderMode
                         setTimeout(() => {
                             viewer.flyTo(tileset, {
                                 duration: 1.0,
                                 offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
-                            }).then(() => {
-                                viewer.scene.requestRenderMode = true;
-                                viewer.scene.requestRender();
                             });
-                        }, 1500);
+                        }, 1600);
                     }
                 });
 
@@ -351,7 +330,6 @@
                             offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-45), 200)
                         });
                     }
-                    viewer.scene.requestRender();
                 });
 
                 // --- HERRAMIENTAS DE MEDICIÓN ---
@@ -365,7 +343,6 @@
                     activeMode = 'DISTANCE';
                     btnDist.classList.add('active');
                     coordsHud.innerHTML = `Modo: Distancia (Clic puntos, 2.º clic mide)`;
-                    viewer.scene.requestRender();
                 });
 
                 btnArea.addEventListener('click', () => {
@@ -374,12 +351,10 @@
                     activeMode = 'AREA';
                     btnArea.classList.add('active');
                     coordsHud.innerHTML = `Modo: Área (Agregue vértices en el tajo...)`;
-                    viewer.scene.requestRender();
                 });
 
                 btnClear.addEventListener('click', () => {
                     resetAllTools();
-                    viewer.scene.requestRender();
                 });
 
                 function resetAllTools() {
@@ -391,7 +366,6 @@
                     btnDist.classList.remove('active');
                     btnArea.classList.remove('active');
                     coordsHud.innerHTML = `Herramientas limpiadas.<br><span style="font-size: 9px; color: #d0e1f9;">[Planta: WGS84 | Altura: Geoide INEGI 1997]</span>`;
-                    viewer.scene.requestRender();
                 }
 
                 function calculatePolygonArea(cartesianPoints) {
@@ -464,7 +438,6 @@
                             coordsHud.innerHTML = `Modo Área: Faltan ${3 - activePoints.length} puntos para calcular...`;
                         }
                     }
-                    viewer.scene.requestRender();
                 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
             } catch (error) {
